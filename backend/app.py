@@ -24,11 +24,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
 
-from data.router_seed import get_seed, LABEL_IDS
+from data import router_seed, sentiment_seed
 from training.router_trainer import train_router
 from training import predict as predictor
 from training import inspect as inspector
 from training import export as exporter
+
+# Every project is just a classification task with its own dataset + labels.
+# The trainer is identical — that's the whole lesson. Add a new task here and
+# the whole pipeline (dataset, train, evals, infer, export) works for it.
+DATASETS = {
+    "router": router_seed,
+    "sentiment": sentiment_seed,
+}
+
+
+def _task(name):
+    """Resolve a task name to its dataset module; default to the router."""
+    return DATASETS.get(name, router_seed)
 
 app = FastAPI(title="Model Lab API")
 
@@ -46,22 +59,39 @@ CHECKPOINTS = os.path.join(os.path.dirname(__file__), "checkpoints")
 # In-memory registry of training runs. Fine for a single-user local tool.
 # job_id -> {"events": [...], "done": bool, "status": str, "model_dir": str|None}
 JOBS = {}
-LATEST_MODEL_DIR = {"path": None}   # remembers the most recently trained model
+# Most recently trained model PER TASK. Each task gets its own model so the
+# router and the sentiment classifier don't overwrite each other.
+LATEST_MODEL_DIR = {t: None for t in DATASETS}
+
+
+def _model_dirs_for(task):
+    """All on-disk checkpoint folders that belong to a task and hold a model."""
+    dirs = []
+    base = os.path.join(CHECKPOINTS, task)
+    if os.path.isdir(base):
+        for n in os.listdir(base):
+            d = os.path.join(base, n)
+            if os.path.isfile(os.path.join(d, "config.json")):
+                dirs.append(d)
+    # Legacy: early router models were saved straight under checkpoints/<id>.
+    if task == "router" and os.path.isdir(CHECKPOINTS):
+        for n in os.listdir(CHECKPOINTS):
+            if n in DATASETS:
+                continue
+            d = os.path.join(CHECKPOINTS, n)
+            if os.path.isfile(os.path.join(d, "config.json")):
+                dirs.append(d)
+    return dirs
 
 
 def _recover_latest_model():
-    # On restart the in-memory pointer is gone, but trained models still live on
-    # disk. Pick the most recently modified checkpoint that actually contains a
-    # model, so /api/infer and /api/evals keep working without re-training.
-    if not os.path.isdir(CHECKPOINTS):
-        return
-    candidates = []
-    for name in os.listdir(CHECKPOINTS):
-        d = os.path.join(CHECKPOINTS, name)
-        if os.path.isfile(os.path.join(d, "config.json")):
-            candidates.append((os.path.getmtime(d), d))
-    if candidates:
-        LATEST_MODEL_DIR["path"] = max(candidates)[1]
+    # On restart the in-memory pointers are gone, but trained models still live
+    # on disk. Pick the newest checkpoint per task so /api/infer, /api/evals and
+    # /api/export keep working without re-training.
+    for task in DATASETS:
+        cands = [(os.path.getmtime(d), d) for d in _model_dirs_for(task)]
+        if cands:
+            LATEST_MODEL_DIR[task] = max(cands)[1]
 
 
 _recover_latest_model()
@@ -75,6 +105,7 @@ class Row(BaseModel):
 
 class TrainRequest(BaseModel):
     rows: list[Row]
+    task: str = "router"
     base_model: str = "distilbert-base-multilingual-cased"
     epochs: int = 5
     lr: float = 5e-5
@@ -84,6 +115,7 @@ class TrainRequest(BaseModel):
 
 class InferRequest(BaseModel):
     text: str
+    task: str = "router"
 
 
 class TokenizeRequest(BaseModel):
@@ -100,6 +132,7 @@ class HubExportRequest(BaseModel):
     token: str
     repo_id: str
     private: bool = True
+    task: str = "router"
 
 
 # Cache tokenizers by model name so repeated calls are instant.
@@ -127,15 +160,17 @@ def health():
 
 # ── The dataset the user starts from (they can edit it in the UI) ────────────
 @app.get("/api/dataset")
-def dataset():
-    return get_seed()
+def dataset(task: str = "router"):
+    return _task(task).get_seed()
 
 
 # ── Start a training run ─────────────────────────────────────────────────────
 @app.post("/api/train")
 def start_training(req: TrainRequest):
+    task = req.task if req.task in DATASETS else "router"
+    label_ids = _task(task).LABEL_IDS
     job_id = uuid.uuid4().hex[:8]
-    model_dir = os.path.join(CHECKPOINTS, job_id)
+    model_dir = os.path.join(CHECKPOINTS, task, job_id)
     JOBS[job_id] = {"events": [], "done": False, "status": "running", "model_dir": model_dir}
 
     def emit(ev):
@@ -153,9 +188,9 @@ def start_training(req: TrainRequest):
                 "test_size": req.test_size,
             }
             rows = [{"text": r.text, "label": r.label} for r in req.rows]
-            train_router(rows, LABEL_IDS, config, emit, model_dir)
+            train_router(rows, label_ids, config, emit, model_dir)
             JOBS[job_id]["status"] = "completed"
-            LATEST_MODEL_DIR["path"] = model_dir
+            LATEST_MODEL_DIR[task] = model_dir
             predictor.evict(model_dir)  # drop any stale cached version
         except Exception as e:
             emit({"type": "error", "message": str(e), "trace": traceback.format_exc()})
@@ -214,7 +249,8 @@ def inspect(req: InspectRequest):
 
 @app.post("/api/infer")
 def infer(req: InferRequest):
-    model_dir = LATEST_MODEL_DIR["path"]
+    task = req.task if req.task in DATASETS else "router"
+    model_dir = LATEST_MODEL_DIR.get(task)
     if not model_dir or not os.path.isdir(model_dir):
         return {"error": "no trained model yet — train one first"}
     return predictor.predict(model_dir, req.text)
@@ -225,8 +261,8 @@ def infer(req: InferRequest):
 # to evals.json next to the model, so they survive a page reload. The Evals
 # section in the UI reads exactly these numbers — real scikit-learn output.
 @app.get("/api/evals")
-def evals():
-    model_dir = LATEST_MODEL_DIR["path"]
+def evals(task: str = "router"):
+    model_dir = LATEST_MODEL_DIR.get(task if task in DATASETS else "router")
     if not model_dir or not os.path.isdir(model_dir):
         return {"error": "no trained model yet — train one first"}
     path = os.path.join(model_dir, "evals.json")
@@ -240,12 +276,13 @@ def evals():
 # Packages weights + tokenizer + config into one file you can keep, share, or
 # commit to GitHub. Fully real — it's the exact folder the model loads from.
 @app.get("/api/export/zip")
-def export_zip():
-    model_dir = LATEST_MODEL_DIR["path"]
+def export_zip(task: str = "router"):
+    task = task if task in DATASETS else "router"
+    model_dir = LATEST_MODEL_DIR.get(task)
     if not model_dir or not os.path.isdir(model_dir):
         return {"error": "no trained model yet — train one first"}
     data = exporter.zip_bytes(model_dir)
-    name = f"model-lab-router-{os.path.basename(model_dir)}.zip"
+    name = f"model-lab-{task}-{os.path.basename(model_dir)}.zip"
     return Response(
         content=data,
         media_type="application/zip",
@@ -258,7 +295,8 @@ def export_zip():
 # for this call and is never stored or logged.
 @app.post("/api/export/hf")
 def export_hf(req: HubExportRequest):
-    model_dir = LATEST_MODEL_DIR["path"]
+    task = req.task if req.task in DATASETS else "router"
+    model_dir = LATEST_MODEL_DIR.get(task)
     if not model_dir or not os.path.isdir(model_dir):
         return {"error": "no trained model yet — train one first"}
     return exporter.push_to_hub(model_dir, req.token, req.repo_id, req.private)
