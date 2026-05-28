@@ -47,8 +47,8 @@ def predict(model_dir, text):
     # torch.no_grad() = "don't track gradients" — we're predicting, not learning,
     # so we skip the bookkeeping that training needs. Faster + less memory.
     with torch.no_grad():
-        logits = model(**inputs).logits          # raw scores, one per lane
-        probs = F.softmax(logits, dim=-1)[0]      # turn scores into probabilities that sum to 1
+        logits = model(**inputs).logits[0]        # raw scores, one per lane
+        probs = F.softmax(logits, dim=-1)         # turn scores into probabilities that sum to 1
 
     # id2label was saved with the model, so we can name the winning lane.
     id2label = model.config.id2label
@@ -57,7 +57,13 @@ def predict(model_dir, text):
         key=lambda x: x["prob"],
         reverse=True,
     )
-    return {"top": ranked[0]["label"], "probs": ranked}
+    # Also return the raw, un-ranked values aligned to the model's label order,
+    # so a visualiser can show the REAL logits (not just the softmaxed probs).
+    by_label = [
+        {"label": id2label[i], "logit": float(logits[i]), "prob": float(probs[i])}
+        for i in range(len(probs))
+    ]
+    return {"top": ranked[0]["label"], "probs": ranked, "by_label": by_label}
 
 
 def evict(model_dir=None):

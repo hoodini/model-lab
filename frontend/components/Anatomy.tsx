@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useLab } from "./providers";
 import { Explain } from "./Explain";
-import { tokenize as apiTokenize, inspect as apiInspect, type Inspect } from "@/lib/api";
+import { tokenize as apiTokenize, inspect as apiInspect, infer as apiInfer, type Inspect, type InferResult } from "@/lib/api";
 
 /* ───────────────────────────────────────────────────────────────────────────
    "Under the Hood" — trace a real prompt through every stage of the router,
@@ -101,6 +101,8 @@ export function Anatomy() {
   const [tokens, setTokens] = useState<{ piece: string; id: number }[]>([]);
   const [insp, setInsp] = useState<Inspect | null>(null);
   const [live, setLive] = useState(false);
+  const [routed, setRouted] = useState<InferResult | null>(null);
+  const [routerLive, setRouterLive] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Swap the default prompt when language flips (only if user hasn't edited).
@@ -145,6 +147,24 @@ export function Anatomy() {
         .catch(() => { if (live) { setInsp(null); setLive(false); } });
     }, 350);
     return () => { live = false; clearTimeout(id); };
+  }, [prompt]);
+
+  // Route the prompt through the REAL trained router (if one exists). When it
+  // does, the logits + softmax stages show the model's true scores instead of
+  // the keyword-heuristic fallback. Debounced; silently falls back if there's
+  // no trained model yet or the backend is down.
+  useEffect(() => {
+    let alive = true;
+    const id = setTimeout(() => {
+      apiInfer(prompt)
+        .then((r) => {
+          if (!alive) return;
+          if (r && !r.error && r.by_label?.length) { setRouted(r); setRouterLive(true); }
+          else { setRouted(null); setRouterLive(false); }
+        })
+        .catch(() => { if (alive) { setRouted(null); setRouterLive(false); } });
+    }, 400);
+    return () => { alive = false; clearTimeout(id); };
   }, [prompt]);
 
   const seed = useMemo(() => hashStr(prompt), [prompt]);
@@ -196,17 +216,25 @@ export function Anatomy() {
     });
   }, [insp, n, seed]);
 
-  // Logits + softmax over the 4 lanes.
+  // Logits + softmax over the 4 lanes. REAL when a trained router exists: the
+  // model's true logits, mapped back into our fixed LANE order. Offline / no
+  // model yet: a keyword-heuristic fallback so the lesson still works.
   const logits = useMemo(() => {
+    if (routerLive && routed?.by_label?.length) {
+      return LANES.map((l) => routed.by_label!.find((b) => b.label === l.key)?.logit ?? 0);
+    }
     const r = mulberry32(seed + 99);
     const bias = laneBias(prompt);
     return LANES.map((_, i) => (r() * 4 - 2) + bias[i]);
-  }, [prompt, seed]);
+  }, [routerLive, routed, prompt, seed]);
   const probs = useMemo(() => {
+    if (routerLive && routed?.by_label?.length) {
+      return LANES.map((l) => routed.by_label!.find((b) => b.label === l.key)?.prob ?? 0);
+    }
     const exp = logits.map((x) => Math.exp(x));
     const s = exp.reduce((a, b) => a + b, 0);
     return exp.map((x) => x / s);
-  }, [logits]);
+  }, [routerLive, routed, logits]);
   const winner = probs.indexOf(Math.max(...probs));
 
   const [encTab, setEncTab] = useState<"self" | "multi" | "ffn">("self");
@@ -309,7 +337,8 @@ export function Anatomy() {
               {String(stage + 1).padStart(2, "0")}
             </div>
             <div className="display" style={{ fontSize: 26 }}>{cur[lang]}</div>
-            {live && (cur.id === "embed" || cur.id === "encoder") && (
+            {((live && (cur.id === "embed" || cur.id === "encoder")) ||
+              (routerLive && (cur.id === "pool" || cur.id === "logits" || cur.id === "softmax"))) && (
               <span className="mono" style={{
                 marginInlineStart: "auto", fontSize: 11, fontWeight: 700,
                 color: "#000", background: "var(--yuv-yellow)", padding: "3px 10px",
@@ -330,6 +359,7 @@ export function Anatomy() {
               prompt={prompt}
               tokens={tokens}
               live={live}
+              routerLive={routerLive}
               embRows={embRows}
               attn={attn}
               heads={heads}
@@ -382,6 +412,7 @@ function StageBody(props: {
   prompt: string;
   tokens: { piece: string; id: number }[];
   live: boolean;
+  routerLive: boolean;
   embRows: number[][];
   attn: number[][];
   heads: number[][][];
@@ -391,7 +422,7 @@ function StageBody(props: {
   probs: number[];
   winner: number;
 }) {
-  const { stage, lang, t, prompt, tokens, live, embRows, attn, heads, encTab, setEncTab, logits, probs, winner } = props;
+  const { stage, lang, t, prompt, tokens, live, routerLive, embRows, attn, heads, encTab, setEncTab, logits, probs, winner } = props;
   const shown = tokens.slice(0, 12);
 
   if (stage === "text") {
@@ -643,6 +674,11 @@ function StageBody(props: {
             "וקטור ה־[CLS] × מטריצת משקלים נלמדת 768×4 ← 4 ציונים גולמיים. הם יכולים להיות שליליים ולא מסתכמים לכלום. רק ביטחון, ללא נרמול."
           )}
         </p>
+        <p className="mono" style={{ marginTop: 8, fontSize: 12.5, color: routerLive ? "var(--yuv-yellow)" : "#aaa" }}>
+          {routerLive
+            ? t("These are your trained router's REAL logits for this prompt.", "אלו הלוגיטים האמיתיים של הראוטר שאימנת עבור הפרומפט הזה.")
+            : t("No trained model yet — these are illustrative (keyword heuristic). Train a router in the lab to see real logits here.", "אין עדיין מודל מאומן — אלו ערכים להמחשה (היוריסטיקת מילות מפתח). אמן ראוטר במעבדה כדי לראות כאן לוגיטים אמיתיים.")}
+        </p>
       </div>
     );
   }
@@ -672,6 +708,11 @@ function StageBody(props: {
             "Softmax squashes the raw logits into 4 probabilities that sum to 100%. The biggest wins — and that's the lane the prompt is sent to.",
             "סופטמקס דוחס את הלוגיטים הגולמיים ל־4 הסתברויות שמסתכמות ב־100%. הגדול ביותר מנצח — וזה הליין שאליו הפרומפט נשלח."
           )}
+        </p>
+        <p className="mono" style={{ marginTop: 8, fontSize: 12.5, color: routerLive ? "var(--yuv-yellow)" : "#aaa" }}>
+          {routerLive
+            ? t("Live decision from your trained router.", "החלטה חיה מהראוטר שאימנת.")
+            : t("Illustrative until you train a model in the lab below.", "להמחשה בלבד עד שתאמן מודל במעבדה למטה.")}
         </p>
       </div>
     );

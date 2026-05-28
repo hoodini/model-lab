@@ -111,7 +111,14 @@ export async function exportToHub(token: string, repo_id: string, isPrivate: boo
   return r.json();
 }
 
-export async function infer(text: string) {
+export type InferResult = {
+  top?: string;
+  probs?: { label: string; prob: number }[];
+  by_label?: { label: string; logit: number; prob: number }[];
+  error?: string;
+};
+
+export async function infer(text: string): Promise<InferResult> {
   const r = await fetch(`${BASE}/api/infer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
