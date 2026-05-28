@@ -3,9 +3,11 @@
 import { Controls } from "@/components/Controls";
 import { ScrollFX } from "@/components/ScrollFX";
 import { Hero } from "@/components/Hero";
+import { Stats } from "@/components/Stats";
 import { HowItWorks } from "@/components/HowItWorks";
 import { Anatomy } from "@/components/Anatomy";
 import { RouterLab } from "@/components/RouterLab";
+import { ComingSoon } from "@/components/ComingSoon";
 import { useLab } from "@/components/providers";
 
 const SOCIALS: [string, string][] = [
@@ -25,9 +27,11 @@ export default function Page() {
       <ScrollFX />
       <Controls />
       <Hero />
+      <Stats />
       <HowItWorks />
       <Anatomy />
       <RouterLab />
+      <ComingSoon />
 
       <footer className="content" style={{ borderTop: "3px solid var(--yuv-purple)", padding: "48px 0" }}>
         <div className="wrap" style={{ display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "space-between", alignItems: "center" }}>

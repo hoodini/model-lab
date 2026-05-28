@@ -144,6 +144,27 @@ input, textarea, select {
 /* ── GSAP reveal initial states ─────────────────────────────────────────── */
 .reveal { opacity: 0; transform: translateY(24px); }
 
+/* ── Dopamine micro-interactions — deliberate, not restless ─────────────── */
+.btn-yellow:hover { box-shadow: 0 0 0 4px rgba(255, 236, 0, 0.28); }
+.btn-purple:hover { box-shadow: 0 0 0 4px rgba(94, 23, 235, 0.30); }
+
+/* Coming-attractions cards lift toward the cursor's row on hover. */
+.ride-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--yuv-yellow) !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* The pipeline stage pills feel like advancing through levels. */
+.stage-pill { transition: transform .12s ease, box-shadow .12s ease; }
+.stage-pill:hover { transform: translateY(-2px); box-shadow: 0 0 0 3px rgba(94, 23, 235, 0.18); }
+
+/* Respect users who'd rather not ride the coaster. */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  html { scroll-behavior: auto; }
+}
+
 /* ── Top control bar — shrink so the language toggle stays reachable on phones ── */
 .topbar-group { display: flex; align-items: center; gap: 18px; }
 .level-switch { display: flex; border: 2px solid #fff; border-radius: 999px; overflow: hidden; }

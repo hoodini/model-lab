@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLab } from "./providers";
 import { Explain } from "./Explain";
 import { LossChart, type Point } from "./LossChart";
+import { CounterUp } from "./Counter";
+import { fireConfetti } from "./Confetti";
 import * as api from "@/lib/api";
 import type { Label, Row } from "@/lib/api";
 
@@ -102,7 +104,13 @@ export function RouterLab() {
         setMetrics({ acc: m.eval_accuracy, f1: m.eval_f1, loss: m.eval_loss });
       }
       if (e.type === "evals") setEvals(e);
-      if (e.type === "done") { setStatus("done"); esRef.current?.close(); }
+      if (e.type === "done") {
+        setStatus("done");
+        esRef.current?.close();
+        // The payoff: YOUR model just finished training. Earn it.
+        fireConfetti({ count: 160 });
+        setTimeout(() => fireConfetti({ count: 90, originY: 0.45 }), 350);
+      }
       if (e.type === "error") {
         setStatus("error");
         setLogs((L) => [...L, "ERROR: " + e.message]);
@@ -261,6 +269,33 @@ export function RouterLab() {
               <span style={{ width: 8, height: 8, borderRadius: 999, background: hw.device === "cpu" ? "var(--yuv-grey-dark)" : "var(--yuv-purple)" }} />
               {t("Auto-detected compute", "חומרה שזוהתה אוטומטית")}: <strong>{hw.device_name}</strong>
               <span style={{ opacity: .65 }}>· {hw.dtype}{hw.mixed_precision ? t(" · mixed precision", " · דיוק מעורב") : ""}</span>
+            </div>
+          )}
+
+          {status === "done" && metrics.acc != null && (
+            <div className="act fx-reveal" style={{
+              background: "var(--yuv-purple)", color: "#fff", border: "3px solid var(--yuv-yellow)",
+              padding: "22px 24px", margin: "4px 0 18px",
+              display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap",
+            }}>
+              <div>
+                <div className="mono" style={{ color: "var(--yuv-yellow)", fontSize: 12, letterSpacing: ".14em", textTransform: "uppercase" }}>
+                  {t("✈ Landed — your model is trained", "✈ נחתנו — המודל שלך מאומן")}
+                </div>
+                <div className="display" style={{ fontSize: "clamp(28px,4vw,42px)", marginTop: 4 }}>
+                  {t("YOU JUST TRAINED A NEURAL NET", "אימנת עכשיו רשת נוירונים")}
+                </div>
+              </div>
+              <div style={{ marginInlineStart: "auto", textAlign: "center" }}>
+                <CounterUp
+                  to={(metrics.acc ?? 0) * 100}
+                  decimals={0}
+                  suffix="%"
+                  replayKey={metrics.acc}
+                  style={{ fontFamily: "var(--font-body)", fontWeight: 900, fontSize: "clamp(48px,9vw,88px)", lineHeight: 1, color: "var(--yuv-yellow)", display: "block" }}
+                />
+                <div className="mono" style={{ fontSize: 12, opacity: .8, marginTop: 4 }}>{t("accuracy on held-out prompts", "דיוק על פרומפטים שהוחזקו")}</div>
+              </div>
             </div>
           )}
 
