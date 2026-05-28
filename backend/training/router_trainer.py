@@ -37,6 +37,8 @@ from transformers import (
 
 from sklearn.metrics import accuracy_score, f1_score
 
+from .hardware import detect as detect_device, summary as device_summary
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # A small helper so the training loop can "talk" to the website in real time.
@@ -116,6 +118,15 @@ def train_router(rows, label_ids, config, emit, output_dir):
 
     base_model = config.get("base_model", "distilbert-base-multilingual-cased")
 
+    # ── Pick the best hardware automatically (GPU / Apple / CPU) ─────────────
+    # No configuration needed — the same code runs anywhere and uses whatever
+    # the machine has. The UI shows what was chosen so you SEE it.
+    dev = detect_device()
+    emit({"type": "device", **device_summary(dev)})
+    emit({"type": "info",
+          "message": f"Compute: {dev.name} · dtype {dev.dtype}"
+                     + (" · mixed precision ON" if (dev.bf16 or dev.fp16) else "")})
+
     emit({"type": "info", "message": f"Loading tokenizer + model: {base_model}"})
 
     # ── STEP 1: TOKENIZE ────────────────────────────────────────────────────
@@ -175,6 +186,12 @@ def train_router(rows, label_ids, config, emit, output_dir):
         logging_steps=1,            # log every single step -> a smooth live loss curve
         report_to="none",           # don't phone home to wandb/tensorboard
         seed=42,
+        # Mixed precision: train in 16-bit where it's safe to halve memory and
+        # speed things up. These flags are chosen by hardware.detect() to match
+        # whatever GPU (if any) is present, so they're correct on every machine.
+        bf16=dev.bf16,
+        fp16=dev.fp16,
+        use_cpu=(dev.kind == "cpu"),
     )
 
     # ── STEP 4: TRAIN ────────────────────────────────────────────────────────

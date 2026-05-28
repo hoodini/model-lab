@@ -82,17 +82,15 @@ def _get_tokenizer(name):
     return _TOKENIZERS[name]
 
 
-# ── Health check: also reports whether the GPU is visible to PyTorch ─────────
+# ── Health check: reports the auto-detected compute device (GPU/Apple/CPU) ───
 @app.get("/api/health")
 def health():
-    info = {"status": "ok", "cuda": False, "gpu": None}
+    info = {"status": "ok"}
     try:
-        import torch
-        info["cuda"] = torch.cuda.is_available()
-        if info["cuda"]:
-            info["gpu"] = torch.cuda.get_device_name(0)
+        from training.hardware import detect, summary
+        info.update(summary(detect()))
     except Exception as e:
-        info["torch_error"] = str(e)
+        info["hardware_error"] = str(e)
     return info
 
 

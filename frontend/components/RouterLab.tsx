@@ -39,6 +39,9 @@ export function RouterLab() {
   const [inferText, setInferText] = useState("");
   const [inferRes, setInferRes] = useState<any>(null);
 
+  // ── detected compute hardware (auto: NVIDIA GPU / Apple / CPU) ──────────
+  const [hw, setHw] = useState<{ device?: string; device_name?: string; dtype?: string; mixed_precision?: boolean } | null>(null);
+
   const labelName = (id: string) => {
     const l = labels.find((x) => x.id === id);
     return l ? l[lang] : id;
@@ -46,6 +49,7 @@ export function RouterLab() {
 
   useEffect(() => {
     api.getDataset().then((d) => { setLabels(d.labels); setRows(d.rows); });
+    api.getHealth().then(setHw).catch(() => {});
   }, []);
 
   useEffect(() => () => esRef.current?.close(), []);
@@ -68,6 +72,7 @@ export function RouterLab() {
     });
 
     esRef.current = api.streamTraining(job_id, (e) => {
+      if (e.type === "device") setHw(e);
       if (e.type === "start") setProgress({ step: 0, total: e.total_steps });
       if (e.type === "info") setLogs((L) => [...L, e.message]);
       if (e.type === "log") {
@@ -226,6 +231,14 @@ export function RouterLab() {
             </div>
             <span className="mono" style={{ fontSize: 13 }}>{progress.step}/{progress.total || "?"}</span>
           </div>
+
+          {hw?.device && (
+            <div className="mono" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, padding: "6px 12px", border: "2px solid #000", background: hw.device === "cpu" ? "#fff" : "var(--yuv-yellow)", marginBottom: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 999, background: hw.device === "cpu" ? "var(--yuv-grey-dark)" : "var(--yuv-purple)" }} />
+              {t("Auto-detected compute", "חומרה שזוהתה אוטומטית")}: <strong>{hw.device_name}</strong>
+              <span style={{ opacity: .65 }}>· {hw.dtype}{hw.mixed_precision ? t(" · mixed precision", " · דיוק מעורב") : ""}</span>
+            </div>
+          )}
 
           <div className="train-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr)", gap: 18 }}>
             <LossChart points={points} />

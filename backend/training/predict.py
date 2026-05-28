@@ -13,6 +13,8 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
+from .hardware import detect as detect_device
+
 # Loading a model from disk is slow, so we cache loaded models in memory keyed
 # by their folder. The first prediction after training pays the load cost; the
 # rest are instant.
@@ -27,8 +29,9 @@ def _load(model_dir):
         # NOTE: this is PyTorch's nn.Module.eval() — NOT Python's eval().
         # It evaluates nothing; it just flips a "we are not training" flag.
         model.train(False)
-        # Use the GPU if available — same hardware that trained it.
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Use the best available device (NVIDIA GPU, Apple GPU, or CPU) — picked
+        # automatically, no configuration. Same detector the trainer uses.
+        device = detect_device().kind
         model.to(device)
         _CACHE[model_dir] = (tokenizer, model, device)
     return _CACHE[model_dir]
