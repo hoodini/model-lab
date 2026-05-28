@@ -48,6 +48,24 @@ JOBS = {}
 LATEST_MODEL_DIR = {"path": None}   # remembers the most recently trained model
 
 
+def _recover_latest_model():
+    # On restart the in-memory pointer is gone, but trained models still live on
+    # disk. Pick the most recently modified checkpoint that actually contains a
+    # model, so /api/infer and /api/evals keep working without re-training.
+    if not os.path.isdir(CHECKPOINTS):
+        return
+    candidates = []
+    for name in os.listdir(CHECKPOINTS):
+        d = os.path.join(CHECKPOINTS, name)
+        if os.path.isfile(os.path.join(d, "config.json")):
+            candidates.append((os.path.getmtime(d), d))
+    if candidates:
+        LATEST_MODEL_DIR["path"] = max(candidates)[1]
+
+
+_recover_latest_model()
+
+
 # ── Request body shapes (pydantic validates incoming JSON for us) ────────────
 class Row(BaseModel):
     text: str
@@ -193,3 +211,19 @@ def infer(req: InferRequest):
     if not model_dir or not os.path.isdir(model_dir):
         return {"error": "no trained model yet — train one first"}
     return predictor.predict(model_dir, req.text)
+
+
+# ── Confusion matrix + per-class metrics from the held-out eval set ──────────
+# These are computed at the END of training (see router_trainer.py) and saved
+# to evals.json next to the model, so they survive a page reload. The Evals
+# section in the UI reads exactly these numbers — real scikit-learn output.
+@app.get("/api/evals")
+def evals():
+    model_dir = LATEST_MODEL_DIR["path"]
+    if not model_dir or not os.path.isdir(model_dir):
+        return {"error": "no trained model yet — train one first"}
+    path = os.path.join(model_dir, "evals.json")
+    if not os.path.isfile(path):
+        return {"error": "this model has no saved evals"}
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)

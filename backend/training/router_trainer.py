@@ -35,7 +35,12 @@ from transformers import (
     DataCollatorWithPadding,             # pads each batch so sequences stack into one tensor
 )
 
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    confusion_matrix,
+    precision_recall_fscore_support,
+)
 
 from .hardware import detect as detect_device, summary as device_summary
 
@@ -213,10 +218,60 @@ def train_router(rows, label_ids, config, emit, output_dir):
     metrics = trainer.evaluate()
     emit({"type": "eval", "metrics": metrics})
 
+    # ── STEP 5b: CONFUSION MATRIX + PER-CLASS METRICS ────────────────────────
+    # A single accuracy number hides WHERE the model is wrong. The confusion
+    # matrix is the honest, full picture: for every true lane (row) it shows how
+    # many eval prompts the model sent to each predicted lane (column). The
+    # diagonal = correct routes; everything off-diagonal = a specific mistake
+    # ("reasoning prompts that got mis-routed to code", etc.).
+    pred_out = trainer.predict(eval_ds)
+    y_true = pred_out.label_ids
+    y_pred = np.argmax(pred_out.predictions, axis=-1)
+    idx = list(range(num_labels))
+
+    # confusion_matrix returns an n×n integer grid; we force `labels=idx` so the
+    # rows/cols line up with our label order even if a class is missing in eval.
+    cm = confusion_matrix(y_true, y_pred, labels=idx).tolist()
+
+    # precision / recall / f1 / support PER class (no averaging) — this is the
+    # scikit-learn classification report, broken out so the UI can render it.
+    prec, rec, f1c, support = precision_recall_fscore_support(
+        y_true, y_pred, labels=idx, average=None, zero_division=0
+    )
+    per_class = [
+        {
+            "id": label_ids[i],
+            "precision": float(prec[i]),
+            "recall": float(rec[i]),
+            "f1": float(f1c[i]),
+            "support": int(support[i]),
+        }
+        for i in idx
+    ]
+
+    evals = {
+        "labels": label_ids,
+        "confusion": cm,
+        "per_class": per_class,
+        "accuracy": float(metrics.get("eval_accuracy", accuracy_score(y_true, y_pred))),
+        "macro_f1": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
+        "weighted_f1": float(f1_score(y_true, y_pred, average="weighted", zero_division=0)),
+        "n_eval": int(len(y_true)),
+        "base_model": base_model,
+    }
+    emit({"type": "evals", **evals})
+
     # ── Save the trained model so we can make predictions with it later ──────
     os.makedirs(output_dir, exist_ok=True)
     trainer.save_model(output_dir)
     tokenizer.save_pretrained(output_dir)
+
+    # Persist the evals next to the model so the UI can re-load them on refresh
+    # (the live SSE stream is gone once the page reloads — this makes it durable).
+    with open(os.path.join(output_dir, "evals.json"), "w", encoding="utf-8") as f:
+        import json as _json
+        _json.dump(evals, f, ensure_ascii=False, indent=2)
+
     emit({"type": "done", "output_dir": output_dir, "metrics": metrics})
 
     return metrics

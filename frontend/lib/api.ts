@@ -73,6 +73,27 @@ export async function inspect(text: string, base_model?: string): Promise<Inspec
   return r.json();
 }
 
+export type PerClass = {
+  id: string; precision: number; recall: number; f1: number; support: number;
+};
+export type Evals = {
+  labels: string[];
+  confusion: number[][];
+  per_class: PerClass[];
+  accuracy: number;
+  macro_f1: number;
+  weighted_f1: number;
+  n_eval: number;
+  base_model: string;
+  error?: string;
+};
+
+// Confusion matrix + per-class metrics for the latest trained model.
+export async function getEvals(): Promise<Evals> {
+  const r = await fetch(`${BASE}/api/evals`);
+  return r.json();
+}
+
 export async function infer(text: string) {
   const r = await fetch(`${BASE}/api/infer`, {
     method: "POST",

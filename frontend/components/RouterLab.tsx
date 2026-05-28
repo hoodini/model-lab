@@ -33,6 +33,7 @@ export function RouterLab() {
   const [logs, setLogs] = useState<string[]>([]);
   const [progress, setProgress] = useState({ step: 0, total: 0 });
   const [metrics, setMetrics] = useState<{ acc?: number; f1?: number; loss?: number }>({});
+  const [evals, setEvals] = useState<api.Evals | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
   // ── inference ─────────────────────────────────────────────────────────
@@ -50,6 +51,8 @@ export function RouterLab() {
   useEffect(() => {
     api.getDataset().then((d) => { setLabels(d.labels); setRows(d.rows); });
     api.getHealth().then(setHw).catch(() => {});
+    // Load any evals saved by the most recent training run (survives reloads).
+    api.getEvals().then((e) => { if (!e.error) setEvals(e); }).catch(() => {});
   }, []);
 
   useEffect(() => () => esRef.current?.close(), []);
@@ -90,6 +93,7 @@ export function RouterLab() {
         const m = e.metrics || {};
         setMetrics({ acc: m.eval_accuracy, f1: m.eval_f1, loss: m.eval_loss });
       }
+      if (e.type === "evals") setEvals(e);
       if (e.type === "done") { setStatus("done"); esRef.current?.close(); }
       if (e.type === "error") {
         setStatus("error");
@@ -293,8 +297,140 @@ export function RouterLab() {
             {inferRes?.error && <p style={{ color: "#c00", marginTop: 10 }}>{inferRes.error}</p>}
           </div>
         </div>
+
+        {/* 7 — evals (confusion matrix + per-class metrics) */}
+        <div>
+          {H("Step 5 · evals", "שלב 5 · הערכה")}
+          <Explain concept="confusion_matrix" />
+          {!evals ? (
+            <p style={{ marginTop: 12, opacity: .8 }}>
+              {t("Train a model above — its confusion matrix and per-class scores appear here, computed on the held-out test set it never saw during training.",
+                 "אמן מודל למעלה — מטריצת הבלבול והציונים לכל מחלקה יופיעו כאן, מחושבים על סט המבחן שהמודל לא ראה באימון.")}
+            </p>
+          ) : (
+            <div style={{ marginTop: 14, display: "grid", gap: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+                <Metric label={t("Accuracy", "דיוק")} value={evals.accuracy} />
+                <Metric label={t("Macro F1", "מאקרו F1")} value={evals.macro_f1} />
+                <Metric label={t("Weighted F1", "F1 משוקלל")} value={evals.weighted_f1} />
+                <div className="card" style={{ textAlign: "center", padding: 16 }}>
+                  <div className="display" style={{ fontSize: 40, color: "var(--yuv-purple)" }}>{evals.n_eval}</div>
+                  <div className="mono" style={{ fontSize: 12, opacity: .7 }}>{t("held-out prompts", "פרומפטים שהוחזקו")}</div>
+                </div>
+              </div>
+
+              <ConfusionMatrix evals={evals} labelName={labelName} t={t} lang={lang} />
+
+              <div className="card">
+                <div className="mono tag" style={{ color: "var(--yuv-purple)", marginBottom: 10 }}>
+                  {t("PER-CLASS METRICS (scikit-learn)", "מדדים לכל מחלקה (scikit-learn)")}
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="mono" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr>
+                        {[t("lane", "מסלול"), t("precision", "דיוק"), t("recall", "ריקול"), "F1", t("support", "תמיכה")].map((h) => (
+                          <th key={h} style={{ textAlign: lang === "he" ? "right" : "left", padding: "6px 10px", borderBottom: "2px solid #000" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {evals.per_class.map((c) => (
+                        <tr key={c.id}>
+                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--yuv-grey)" }}>{labelName(c.id)}</td>
+                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--yuv-grey)" }}>{(c.precision * 100).toFixed(0)}%</td>
+                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--yuv-grey)" }}>{(c.recall * 100).toFixed(0)}%</td>
+                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--yuv-grey)" }}>{(c.f1 * 100).toFixed(0)}%</td>
+                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--yuv-grey)" }}>{c.support}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p style={{ fontSize: 12.5, marginTop: 10, opacity: .8 }}>
+                  {t("Precision = of the prompts sent to this lane, how many belonged there. Recall = of the prompts that truly belonged here, how many we caught. F1 balances both. Support = how many test prompts of this lane existed.",
+                     "דיוק (precision) = מבין הפרומפטים שנשלחו למסלול הזה, כמה באמת שייכים אליו. ריקול (recall) = מבין הפרומפטים ששייכים באמת למסלול, כמה תפסנו. F1 מאזן בין השניים. תמיכה = כמה פרומפטים מהמסלול הזה היו בסט המבחן.")}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </section>
+  );
+}
+
+// Real confusion matrix: rows = the TRUE lane, columns = the lane the model
+// PREDICTED. Diagonal = correct routes (purple, scaled by count). Off-diagonal
+// non-zero cells = specific mistakes, highlighted in yellow so your eye lands on
+// exactly where the model confuses one lane for another.
+function ConfusionMatrix({
+  evals, labelName, t, lang,
+}: {
+  evals: api.Evals;
+  labelName: (id: string) => string;
+  t: (en: string, he: string) => string;
+  lang: string;
+}) {
+  const { confusion, labels } = evals;
+  const max = Math.max(1, ...confusion.flat());
+  const cell = 56;
+  return (
+    <div className="card" style={{ overflowX: "auto" }}>
+      <div className="mono tag" style={{ color: "var(--yuv-purple)", marginBottom: 12 }}>
+        {t("CONFUSION MATRIX · true (row) → predicted (column)", "מטריצת בלבול · אמת (שורה) → ניבוי (עמודה)")}
+      </div>
+      <table style={{ borderCollapse: "collapse", margin: "0 auto" }}>
+        <thead>
+          <tr>
+            <th />
+            {labels.map((l) => (
+              <th key={l} className="mono" style={{ fontSize: 11, fontWeight: 700, padding: "4px 6px", maxWidth: cell, lineHeight: 1.1 }}>
+                {labelName(l)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {confusion.map((row, ri) => (
+            <tr key={ri}>
+              <th className="mono" style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", textAlign: lang === "he" ? "left" : "right", whiteSpace: "nowrap" }}>
+                {labelName(labels[ri])}
+              </th>
+              {row.map((v, ci) => {
+                const diag = ri === ci;
+                const inten = v / max;
+                const bg = v === 0
+                  ? "var(--yuv-grey)"
+                  : diag
+                  ? `rgba(94,23,235,${0.18 + 0.82 * inten})`
+                  : `rgba(255,236,0,${0.30 + 0.70 * inten})`;
+                return (
+                  <td key={ci} style={{
+                    width: cell, height: cell, textAlign: "center", verticalAlign: "middle",
+                    border: "1.5px solid #000", background: bg,
+                    color: diag && inten > 0.5 ? "#fff" : "#000",
+                    fontWeight: 700, fontSize: 16,
+                  }} className="mono">
+                    {v}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ display: "flex", gap: 18, marginTop: 12, flexWrap: "wrap", fontSize: 12 }} className="mono">
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 14, height: 14, background: "rgba(94,23,235,.9)", border: "1.5px solid #000", display: "inline-block" }} />
+          {t("correct (on the diagonal)", "נכון (על האלכסון)")}
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 14, height: 14, background: "rgba(255,236,0,.9)", border: "1.5px solid #000", display: "inline-block" }} />
+          {t("mistake (off-diagonal)", "טעות (מחוץ לאלכסון)")}
+        </span>
+      </div>
+    </div>
   );
 }
 
