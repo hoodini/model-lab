@@ -88,7 +88,9 @@ body {
   border: 2px solid var(--yuv-black);
   border-radius: 0;
   padding: 24px;
+  transition: transform .18s ease, border-color .18s ease;
 }
+.card:hover { transform: translateY(-4px); border-color: var(--yuv-purple); }
 
 /* ── Buttons: radius 0 or 999px only ────────────────────────────────────── */
 .btn {

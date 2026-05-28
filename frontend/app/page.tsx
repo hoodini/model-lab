@@ -1,8 +1,10 @@
 "use client";
 
 import { Controls } from "@/components/Controls";
+import { ScrollFX } from "@/components/ScrollFX";
 import { Hero } from "@/components/Hero";
 import { HowItWorks } from "@/components/HowItWorks";
+import { Anatomy } from "@/components/Anatomy";
 import { RouterLab } from "@/components/RouterLab";
 import { useLab } from "@/components/providers";
 
@@ -20,9 +22,11 @@ export default function Page() {
   const { t } = useLab();
   return (
     <main>
+      <ScrollFX />
       <Controls />
       <Hero />
       <HowItWorks />
+      <Anatomy />
       <RouterLab />
 
       <footer className="content" style={{ borderTop: "3px solid var(--yuv-purple)", padding: "48px 0" }}>
