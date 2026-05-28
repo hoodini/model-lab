@@ -20,25 +20,25 @@ const RIDES: Ride[] = [
     chipEn: "GENERATION", chipHe: "ג'נרציה",
   },
   {
-    en: "Fine-tune giants with LoRA",
-    he: "כיוונון ענקים עם LoRA",
-    descEn: "Train tiny adapters (LoRA / QLoRA) to bend huge models on a single GPU — most of the weights frozen, a few million trained.",
-    descHe: "אימון אדפטרים זעירים (LoRA / QLoRA) כדי לכופף מודלים ענקיים על GPU יחיד — רוב המשקלים קפואים, כמה מיליונים מתאמנים.",
-    chipEn: "EFFICIENT", chipHe: "יעיל",
-  },
-  {
-    en: "Text becomes pixels",
-    he: "טקסט הופך לפיקסלים",
-    descEn: "Image generation, demystified: how diffusion turns noise into a picture — run it and watch each denoising step.",
-    descHe: "יצירת תמונות, ללא מסתורין: איך דיפוזיה הופכת רעש לתמונה — הרצה וצפייה בכל צעד ניקוי.",
+    en: "Generate images live",
+    he: "יצירת תמונות בזמן אמת",
+    descEn: "The academy explains diffusion and ai-toolkit; next we run it in-app — type a prompt, watch the denoising steps turn noise into a picture.",
+    descHe: "האקדמיה מסבירה דיפוזיה ו-ai-toolkit; בהמשך נריץ את זה בתוך האפליקציה — כתוב פרומפט, צפה בצעדי הניקוי הופכים רעש לתמונה.",
     chipEn: "DIFFUSION", chipHe: "דיפוזיה",
   },
   {
-    en: "Generative models & GPT-2",
-    he: "מודלים גנרטיביים ו-GPT-2",
-    descEn: "Add decoder models to the training list — and finally see why routing uses an encoder while writing needs a decoder.",
-    descHe: "הוספת מודלי דקודר לרשימת האימון — וסוף סוף להבין למה ניתוב משתמש באנקודר בעוד כתיבה דורשת דקודר.",
+    en: "Train a text generator",
+    he: "אמן מחולל טקסט",
+    descEn: "Add decoder models (GPT-2 and friends) to the live training list — a generative head instead of a classifier, same five steps.",
+    descHe: "הוספת מודלי דקודר (GPT-2 וחברים) לרשימת האימון החיה — ראש גנרטיבי במקום מסווג, אותם חמישה שלבים.",
     chipEn: "DECODERS", chipHe: "דקודרים",
+  },
+  {
+    en: "RAG & retrieval, end to end",
+    he: "RAG ואחזור, מקצה לקצה",
+    descEn: "Wire an embedding model into a real vector search so a model can look things up before it answers — the academy's embedding lesson, made live.",
+    descHe: "חיבור מודל embedding לחיפוש וקטורי אמיתי כך שמודל יכול לחפש לפני שהוא עונה — שיעור ה-embedding של האקדמיה, בזמן אמת.",
+    chipEn: "RETRIEVAL", chipHe: "אחזור",
   },
 ];
 
@@ -58,8 +58,8 @@ export function ComingSoon() {
         </div>
         <p style={{ maxWidth: 680, marginTop: 14, fontSize: 17, lineHeight: 1.6, color: "#EDE7FF" }}>
           {t(
-            "Projects 01 (router) and 02 (sentiment) are live above. These are coming next — each one a real model you train yourself, explained at every level, running on your own hardware. Same promise: nothing hidden.",
-            "פרויקטים 01 (ראוטר) ו-02 (סנטימנט) פעילים למעלה. אלו מגיעים בהמשך — כל אחד מודל אמיתי שאתם מאמנים בעצמכם, מוסבר בכל רמה, רץ על החומרה שלכם. אותה הבטחה: שום דבר לא מוסתר."
+            "Two projects are live (router, sentiment) and the academy above explains the rest — LoRA/QLoRA, Unsloth, diffusion, ai-toolkit. These are the live, runnable tools coming next. Same promise: nothing hidden.",
+            "שני פרויקטים פעילים (ראוטר, סנטימנט) והאקדמיה למעלה מסבירה את השאר — LoRA/QLoRA, Unsloth, דיפוזיה, ai-toolkit. אלו הכלים החיים וההרצה שמגיעים בהמשך. אותה הבטחה: שום דבר לא מוסתר."
           )}
         </p>
 

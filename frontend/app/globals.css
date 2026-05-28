@@ -175,6 +175,19 @@ input, textarea, select {
   .train-grid { grid-template-columns: 1fr !important; }
 }
 
+/* Mobile overflow guards. Some sections use `.wrap` as a single-column grid;
+   its implicit track is `auto` (sizes to max-content) which can push the page
+   wider than the viewport. Pin grid wraps to minmax(0,1fr) and let grid/flex
+   children shrink below their content size. Harmless on block `.wrap`s. SVGs
+   never force width; wide tables keep their own overflow-x:auto. */
+.wrap { grid-template-columns: minmax(0, 1fr); }
+.wrap > *, .train-grid, .train-grid > * { min-width: 0; }
+svg { max-width: 100%; }
+/* Backstop: never let the page itself scroll sideways. `clip` (not `hidden`)
+   doesn't create a scroll container, so sticky headers still work; genuinely
+   wide widgets (tables, logs) keep their own inner overflow-x:auto. */
+main { overflow-x: clip; }
+
 @media (max-width: 480px) {
   /* Stack the bar into two centered rows so the language toggle is never clipped. */
   .topbar-inner { flex-wrap: wrap; height: auto !important; padding-top: 10px; padding-bottom: 10px; gap: 10px !important; justify-content: center; }
