@@ -428,10 +428,32 @@ function StageBody(props: {
             </div>
           ))}
         </div>
-        <p style={{ marginTop: 16, opacity: 0.8 }}>
+
+        {/* Honest color legend — what the cells actually mean */}
+        <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+          <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>
+            {t("each row = one token", "כל שורה = טוקן אחד")}
+          </span>
+          <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>
+            {t("each column = one dimension", "כל עמודה = מימד אחד")}
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>{t("low", "נמוך")}</span>
+            <span style={{ width: 120, height: 12, background: "linear-gradient(90deg, var(--yuv-purple), var(--yuv-yellow))", display: "inline-block" }} />
+            <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>{t("high", "גבוה")}</span>
+          </span>
+        </div>
+
+        <p style={{ marginTop: 12, opacity: 0.8 }}>
           {t(
-            "Every ID is looked up into a learned 768-number vector (16 shown). Similar meanings get similar vectors — this is where text turns into geometry.",
-            "כל מזהה מומר לוקטור נלמד של 768 מספרים (16 מוצגים). משמעויות דומות מקבלות וקטורים דומים — כאן הטקסט הופך לגאומטריה."
+            "Each cell's color is one number in that token's vector: purple = low, yellow = high. Read a row left-to-right and you're reading the token's coordinates in meaning-space. Every ID is looked up into a learned 768-number vector (16 shown here). Similar meanings get similar vectors — this is where text turns into geometry.",
+            "צבע כל משבצת הוא מספר אחד בוקטור של הטוקן: סגול = נמוך, צהוב = גבוה. קראו שורה משמאל לימין וזה הקואורדינטות של הטוקן במרחב־המשמעות. כל מזהה מומר לוקטור נלמד של 768 מספרים (16 מוצגים כאן). משמעויות דומות מקבלות וקטורים דומים — כאן הטקסט הופך לגאומטריה."
+          )}
+        </p>
+        <p className="mono" style={{ marginTop: 8, fontSize: 11, opacity: 0.55 }}>
+          {t(
+            "Note: the values shown here are illustrative (deterministically generated per token) so you can see the structure. The real vectors come from the model's weights.",
+            "הערה: הערכים כאן הם להמחשה (נוצרים דטרמיניסטית לכל טוקן) כדי שתראו את המבנה. הוקטורים האמיתיים מגיעים ממשקלי המודל."
           )}
         </p>
       </div>

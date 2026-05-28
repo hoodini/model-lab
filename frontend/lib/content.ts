@@ -368,8 +368,188 @@ export const CONCEPTS: Record<string, Explain> = {
         he: "מעבר קדימה → loss → מעבר אחורה (כלל השרשרת מחשב ∂loss/∂w לכל משקל) → צעד אופטימייזר (w ← w − lr·gradient). מחזור כזה על batch הוא 'צעד'; קצב הלמידה קובע את גודל הצעד. האופטימייזר (AdamW) מתאים את הצעד פר-פרמטר בעזרת ממוצעים נעים של גרדיאנטים קודמים, מה שהופך את האימון ליציב בהרבה מ-SGD פשוט.",
       },
       advanced: {
-        en: "Backprop = reverse-mode autodiff: one forward pass caches activations, one reverse pass accumulates vector-Jacobian products in O(1) passes regardless of parameter count. AdamW maintains 1st/2nd moment estimates (m, v) with bias correction and decoupled weight decay. Stability tooling: gradient clipping, LR warmup (the early steps have huge, noisy gradients), mixed-precision (bf16/fp16) with loss scaling. On a 4090 you'd enable bf16 + gradient checkpointing to trade compute for memory on larger models.",
-        he: "Backprop = autodiff במצב-הפוך: מעבר קדימה אחד שומר אקטיבציות, מעבר הפוך אחד צובר מכפלות vector-Jacobian ב-O(1) מעברים ללא תלות במספר הפרמטרים. AdamW מתחזק אומדני מומנט ראשון/שני (m, v) עם תיקון הטיה ו-weight decay מנותק. כלי יציבות: gradient clipping, LR warmup (לצעדים הראשונים גרדיאנטים ענקיים ורועשים), mixed-precision (bf16/fp16) עם loss scaling. על 4090 תפעיל bf16 + gradient checkpointing כדי להמיר חישוב בזיכרון במודלים גדולים יותר.",
+        en: "Backprop = reverse-mode autodiff: one forward pass caches activations, one reverse pass accumulates vector-Jacobian products in O(1) passes regardless of parameter count. AdamW maintains 1st/2nd moment estimates (m, v) with bias correction and decoupled weight decay. Stability tooling: gradient clipping, LR warmup (the early steps have huge, noisy gradients), mixed-precision (bf16/fp16) with loss scaling. On any modern GPU you'd enable bf16 + gradient checkpointing to trade compute for memory on larger models — the app picks bf16/fp16/fp32 automatically for your hardware.",
+        he: "Backprop = autodiff במצב-הפוך: מעבר קדימה אחד שומר אקטיבציות, מעבר הפוך אחד צובר מכפלות vector-Jacobian ב-O(1) מעברים ללא תלות במספר הפרמטרים. AdamW מתחזק אומדני מומנט ראשון/שני (m, v) עם תיקון הטיה ו-weight decay מנותק. כלי יציבות: gradient clipping, LR warmup (לצעדים הראשונים גרדיאנטים ענקיים ורועשים), mixed-precision (bf16/fp16) עם loss scaling. על כל GPU מודרני תפעיל bf16 + gradient checkpointing כדי להמיר חישוב בזיכרון במודלים גדולים יותר — האפליקציה בוחרת bf16/fp16/fp32 אוטומטית לפי החומרה שלך.",
+      },
+    },
+  },
+
+  head: {
+    title: { en: "Head — why it's called that", he: "Head (ראש) — למה קוראים לזה ככה" },
+    levels: {
+      beginner: {
+        en: "A 'head' is a small part bolted onto the end of a network that produces the final answer in the shape YOU need. Think of the big pretrained model as a body that understands language, and the head as a hat you swap depending on the job: a classification head outputs 4 lane scores; a different head could output one number, or a whole sentence. It's called a 'head' because it sits at the very top (the output end) of the network.",
+        he: "'ראש' (head) הוא חלק קטן שמחברים לקצה הרשת והוא מפיק את התשובה הסופית בצורה שאתה צריך. דמיין את המודל הגדול המאומן כגוף שמבין שפה, והראש ככובע שמחליפים לפי המשימה: ראש סיווג מפיק 4 ציוני ליינים; ראש אחר יכול להפיק מספר אחד, או משפט שלם. קוראים לזה 'ראש' כי הוא יושב ממש בקצה העליון (צד הפלט) של הרשת.",
+      },
+      intermediate: {
+        en: "Two different 'head' meanings share the word — don't confuse them. (1) A TASK head: the final layer(s) mapping the model's hidden representation to your output (e.g. a 768→4 linear layer for classification). (2) An ATTENTION head: one of the parallel attention computations inside each transformer layer. Same word, different place. When people say 'we froze the body and trained the head', they mean the task head.",
+        he: "שתי משמעויות שונות חולקות את המילה 'head' — אל תתבלבל. (1) ראש משימה (task head): השכבה/ות האחרונות שממפות את הייצוג הפנימי של המודל לפלט שלך (למשל שכבה לינארית 768→4 לסיווג). (2) ראש קשב (attention head): אחד מחישובי הקשב המקבילים בתוך כל שכבת טרנספורמר. אותה מילה, מקום אחר. כשאומרים 'הקפאנו את הגוף ואימנו את הראש' מתכוונים לראש המשימה.",
+      },
+      advanced: {
+        en: "Task head: a small module (often a single nn.Linear, sometimes pooler+dropout+linear) on top of the pooled/[CLS] representation; only its weights are randomly initialized, so fine-tuning spends most of its signal there. Attention head: with model dim d and h heads, each head works in a d/h subspace via its own learned Wq/Wk/Wv projections; outputs are concatenated and mixed by Wo. The two are unrelated mechanisms that unfortunately share a name.",
+        he: "ראש משימה: מודול קטן (לרוב nn.Linear יחיד, לפעמים pooler+dropout+linear) מעל הייצוג המאוגם/[CLS]; רק המשקלים שלו מאותחלים אקראית, ולכן fine-tuning משקיע שם את רוב האות. ראש קשב: עם מימד מודל d ו-h ראשים, כל ראש עובד בתת-מרחב d/h דרך הטלות Wq/Wk/Wv נלמדות משלו; הפלטים משורשרים ומעורבבים ע\"י Wo. שני מנגנונים לא קשורים שלמרבה הצער חולקים שם.",
+      },
+    },
+  },
+
+  context_window: {
+    title: { en: "Context window", he: "חלון הקשר (Context Window)" },
+    levels: {
+      beginner: {
+        en: "The context window is how many tokens the model can 'see' at once — its short-term memory. If a model has a 4,000-token window and you paste a 10,000-token document, it physically cannot look at all of it; the overflow is cut. Bigger windows let the model consider more (a whole codebase, a long chat history) but cost much more memory and time.",
+        he: "חלון ההקשר הוא כמה טוקנים המודל יכול 'לראות' בבת אחת — הזיכרון לטווח הקצר שלו. אם למודל יש חלון של 4,000 טוקנים ואתה מדביק מסמך של 10,000 טוקנים, הוא פיזית לא יכול להסתכל על הכל; העודף נחתך. חלונות גדולים מאפשרים למודל לשקול יותר (קוד שלם, היסטוריית שיחה ארוכה) אבל עולים הרבה יותר זיכרון וזמן.",
+      },
+      intermediate: {
+        en: "The window size is the max sequence length the model accepts. The cost matters: classic self-attention is O(n²) in sequence length — double the context, quadruple the attention compute and memory. That quadratic wall is exactly why long-context models need tricks (Flash Attention for memory, RoPE/ALiBi for length generalization, sometimes sparse/sliding-window attention).",
+        he: "גודל החלון הוא אורך הרצף המקסימלי שהמודל מקבל. העלות חשובה: self-attention קלאסי הוא O(n²) באורך הרצף — הכפלת ההקשר פי 2 מרבעת את חישוב וזיכרון הקשב. הקיר הריבועי הזה הוא בדיוק הסיבה שמודלים ארוכי-הקשר צריכים טריקים (Flash Attention לזיכרון, RoPE/ALiBi להכללת אורך, לפעמים קשב דליל/חלון נע).",
+      },
+      advanced: {
+        en: "Effective context ≠ advertised context: models often degrade well before their max (the 'lost in the middle' effect — recall is best at the start and end of the window). KV-cache size grows linearly with context and dominates inference memory at long lengths. Extending context post-training uses RoPE scaling (linear/NTK/YaRN) plus a little continued training. Our router uses max_length=128 — tiny, because routing only needs the prompt's gist.",
+        he: "הקשר אפקטיבי ≠ הקשר מוצהר: מודלים נוטים להידרדר הרבה לפני המקסימום (אפקט 'אבוד באמצע' — ה-recall הכי טוב בהתחלה ובסוף החלון). גודל ה-KV-cache גדל לינארית עם ההקשר ושולט בזיכרון ההסקה באורכים גדולים. הרחבת הקשר אחרי אימון משתמשת ב-RoPE scaling (linear/NTK/YaRN) ועוד קצת אימון המשך. הראוטר שלנו משתמש ב-max_length=128 — זעיר, כי ניתוב צריך רק את תמצית הפרומפט.",
+      },
+    },
+  },
+
+  flash_attention: {
+    title: { en: "Flash Attention", he: "Flash Attention" },
+    levels: {
+      beginner: {
+        en: "Flash Attention is a faster, leaner way to compute the exact same attention — it doesn't change the answer, just how it's calculated. The naive way builds a giant n×n table in memory; Flash Attention avoids ever storing that whole table, so it uses far less memory and runs much faster, especially on long inputs. You turn it on and your training just gets quicker and fits bigger models.",
+        he: "Flash Attention היא דרך מהירה וחסכונית יותר לחשב את אותו attention בדיוק — היא לא משנה את התשובה, רק איך מחשבים אותה. הדרך הנאיבית בונה טבלת n×n ענקית בזיכרון; Flash Attention נמנעת מאחסון כל הטבלה הזו, ולכן משתמשת בהרבה פחות זיכרון ורצה הרבה יותר מהר, במיוחד על קלטים ארוכים. מפעילים אותה והאימון פשוט נהיה מהיר יותר ומכיל מודלים גדולים יותר.",
+      },
+      intermediate: {
+        en: "It's an IO-aware exact attention algorithm. The bottleneck in attention isn't the math, it's moving the n×n score matrix between fast on-chip SRAM and slow HBM memory. Flash Attention tiles the computation and fuses softmax so the full matrix never materializes in HBM — memory drops from O(n²) to O(n), with a big wall-clock speedup. Same numerical result (up to floating-point noise).",
+        he: "זהו אלגוריתם attention מדויק מודע-IO. צוואר הבקבוק ב-attention הוא לא החשבון אלא הזזת מטריצת הציונים n×n בין SRAM מהיר על-השבב ל-HBM איטי. Flash Attention מרצפת (tiling) את החישוב וממזגת softmax כך שהמטריצה המלאה לעולם לא מתממשת ב-HBM — הזיכרון יורד מ-O(n²) ל-O(n), עם האצה משמעותית בזמן-קיר. אותה תוצאה מספרית (עד רעש נקודה צפה).",
+      },
+      advanced: {
+        en: "Online softmax with running max/sum lets each tile update the output without the global normalizer; the backward pass recomputes attention on the fly (cheaper than storing it). FA2 improves work partitioning across warps; FA3 exploits Hopper async/FP8. Caveats: needs a supported GPU + dtype (fp16/bf16), specific head dims, and integration (e.g. attn_implementation='flash_attention_2'). It changes throughput/footprint, not model quality.",
+        he: "online softmax עם max/sum רצים מאפשר לכל אריח לעדכן את הפלט בלי הנרמול הגלובלי; המעבר האחורי מחשב מחדש attention תוך כדי תנועה (זול יותר מאחסון). FA2 משפר חלוקת עבודה בין warps; FA3 מנצל async/FP8 של Hopper. אזהרות: דורש GPU + dtype נתמכים (fp16/bf16), מימדי ראש מסוימים, ואינטגרציה (למשל attn_implementation='flash_attention_2'). משנה תפוקה/טביעת-זיכרון, לא איכות מודל.",
+      },
+    },
+  },
+
+  pre_norm: {
+    title: { en: "Pre-norm vs post-norm (LayerNorm placement)", he: "Pre-norm מול Post-norm (מיקום LayerNorm)" },
+    levels: {
+      beginner: {
+        en: "LayerNorm is a step that re-scales the numbers flowing through the network so they don't explode or vanish. The question is WHERE to put it: before each attention/feed-forward block ('pre-norm') or after it ('post-norm'). Pre-norm turned out to be much more stable to train, so almost every modern model uses it. It's a small placement choice with a big effect on whether training even converges.",
+        he: "LayerNorm הוא שלב שמכייל מחדש את המספרים שזורמים דרך הרשת כדי שלא יתפוצצו או ייעלמו. השאלה היא איפה לשים אותו: לפני כל בלוק attention/feed-forward ('pre-norm') או אחריו ('post-norm'). התברר ש-pre-norm יציב הרבה יותר לאימון, ולכן כמעט כל מודל מודרני משתמש בו. בחירת מיקום קטנה עם השפעה גדולה על האם האימון בכלל מתכנס.",
+      },
+      intermediate: {
+        en: "Post-norm (original Transformer): x → Sublayer → Add → LayerNorm. Pre-norm: x → LayerNorm → Sublayer → Add. Pre-norm keeps a clean residual highway from input to output, so gradients flow without being repeatedly rescaled — you can train deep stacks without the careful LR warmup post-norm demands. The trade-off: pre-norm can slightly underperform when very carefully tuned, but its robustness wins in practice.",
+        he: "Post-norm (הטרנספורמר המקורי): x → Sublayer → Add → LayerNorm. Pre-norm: x → LayerNorm → Sublayer → Add. Pre-norm שומר כביש-מהיר שיורי נקי מהקלט לפלט, כך שגרדיאנטים זורמים בלי שמכיילים אותם שוב ושוב — אפשר לאמן ערימות עמוקות בלי ה-LR warmup הזהיר ש-post-norm דורש. הפשרה: pre-norm יכול להיות מעט פחות טוב כשמכווננים בקפידה רבה, אבל החוסן שלו מנצח בפועל.",
+      },
+      advanced: {
+        en: "Post-norm's output-layer Jacobian compounds, giving gradient norms that grow/shrink with depth → needs warmup + careful init. Pre-norm makes the residual branch an identity at init, bounding the effective gradient and enabling 100+ layer training, but causes 'representation collapse'/growing residual stream variance, often patched with a final LN. Variants: RMSNorm (drops the mean-centering, used in Llama), DeepNorm, sandwich norm. This is why nearly all current LLMs are pre-norm + RMSNorm.",
+        he: "ה-Jacobian של שכבת הפלט ב-post-norm מצטבר, ונותן נורמות גרדיאנט שגדלות/קטנות עם העומק → דורש warmup + אתחול זהיר. Pre-norm הופך את הענף השיורי לזהות באתחול, חוסם את הגרדיאנט האפקטיבי ומאפשר אימון 100+ שכבות, אבל גורם ל'קריסת ייצוג'/שונות גדלה בזרם השיורי, שלרוב מתוקנת ב-LN סופי. וריאנטים: RMSNorm (מוותר על מירכוז הממוצע, בשימוש ב-Llama), DeepNorm, sandwich norm. לכן כמעט כל ה-LLMים הנוכחיים הם pre-norm + RMSNorm.",
+      },
+    },
+  },
+
+  rope: {
+    title: { en: "Rotary embeddings (RoPE)", he: "Rotary Embeddings (RoPE)" },
+    levels: {
+      beginner: {
+        en: "Transformers process all tokens at once, so they need to be told the ORDER of words — otherwise 'dog bites man' and 'man bites dog' look identical. RoPE is the modern way to inject position. Instead of adding a 'position number' to each token, it rotates each token's vector by an angle that depends on its position. Models like Llama use it because it handles longer texts more gracefully than the old method.",
+        he: "טרנספורמרים מעבדים את כל הטוקנים בבת אחת, ולכן צריך לומר להם את הסדר של המילים — אחרת 'כלב נושך אדם' ו'אדם נושך כלב' נראים זהים. RoPE היא הדרך המודרנית להזריק מיקום. במקום להוסיף 'מספר מיקום' לכל טוקן, היא מסובבת את הוקטור של כל טוקן בזווית שתלויה במיקומו. מודלים כמו Llama משתמשים בה כי היא מתמודדת עם טקסטים ארוכים יותר בחן רב יותר מהשיטה הישנה.",
+      },
+      intermediate: {
+        en: "RoPE = Rotary Position Embedding. It applies a position-dependent rotation to the query and key vectors (in 2D pairs) before the dot product. The elegant consequence: the attention score between positions i and j ends up depending only on their RELATIVE distance (i−j), not absolute positions — so the model naturally generalizes to offsets it didn't see much in training. It's applied inside attention, not added at the input like the original sinusoidal encodings.",
+        he: "RoPE = Rotary Position Embedding. היא מפעילה סיבוב תלוי-מיקום על וקטורי ה-query וה-key (בזוגות דו-מימדיים) לפני המכפלה הסקלרית. התוצאה האלגנטית: ציון הקשב בין מיקומים i ו-j תלוי בסוף רק במרחק היחסי שלהם (i−j), לא במיקומים מוחלטים — כך שהמודל מכליל באופן טבעי להיסטים שלא ראה הרבה באימון. מוחלת בתוך ה-attention, לא נוספת בקלט כמו הקידוד הסינוסואידלי המקורי.",
+      },
+      advanced: {
+        en: "Each 2D subspace of q,k is rotated by angle θ_d·position with θ_d = base^(−2d/dim) (base=10000 classically). Because rotation matrices satisfy R(a)ᵀR(b)=R(b−a), qᵢᵀkⱼ depends on relative offset — relative position 'for free' with no extra params. Long-context extension scales the frequencies: linear interpolation, NTK-aware scaling, or YaRN, usually with brief continued pretraining. Contrast ALiBi (adds a linear distance bias to logits instead of rotating).",
+        he: "כל תת-מרחב דו-מימדי של q,k מסובב בזווית θ_d·position כאשר θ_d = base^(−2d/dim) (base=10000 קלאסית). מכיוון שמטריצות סיבוב מקיימות R(a)ᵀR(b)=R(b−a), qᵢᵀkⱼ תלוי בהיסט היחסי — מיקום יחסי 'בחינם' בלי פרמטרים נוספים. הרחבת הקשר ארוך מכווצת/מותחת את התדרים: אינטרפולציה לינארית, NTK-aware scaling, או YaRN, לרוב עם אימון-המשך קצר. השוו ל-ALiBi (מוסיף הטיית מרחק לינארית ללוגיטים במקום לסובב).",
+      },
+    },
+  },
+
+  mixed_precision: {
+    title: { en: "Mixed precision (bf16 / fp16)", he: "דיוק מעורב (bf16 / fp16)" },
+    levels: {
+      beginner: {
+        en: "Numbers in a model are normally stored as 32-bit floats (high precision, lots of memory). Mixed precision stores most of them as 16-bit instead — half the memory, faster math — while keeping the few sensitive parts in 32-bit so accuracy barely changes. The result: training fits bigger models and runs faster on the same GPU. This app picks the right precision for your hardware automatically.",
+        he: "מספרים במודל נשמרים בדרך כלל כ-float של 32 ביט (דיוק גבוה, הרבה זיכרון). דיוק מעורב שומר את רובם כ-16 ביט במקום — חצי מהזיכרון, חשבון מהיר יותר — תוך שמירת המעט החלקים הרגישים ב-32 ביט כך שהדיוק כמעט לא משתנה. התוצאה: האימון מכיל מודלים גדולים יותר ורץ מהר יותר על אותו GPU. האפליקציה בוחרת את הדיוק הנכון לחומרה שלך אוטומטית.",
+      },
+      intermediate: {
+        en: "Two 16-bit formats: fp16 (1 sign / 5 exponent / 10 mantissa) is precise but has a narrow range that overflows easily → needs 'loss scaling'. bf16 (1/8/7) keeps fp32's exponent range, so it almost never overflows and needs no loss scaling — that's why it's preferred on GPUs that support it (Ampere+). Master weights and the optimizer state stay fp32; only the forward/backward compute is 16-bit (autocast).",
+        he: "שני פורמטים של 16 ביט: fp16 (1 סימן / 5 מעריך / 10 מנטיסה) מדויק אבל בעל טווח צר שעולה על גדותיו בקלות → דורש 'loss scaling'. bf16 (1/8/7) שומר על טווח המעריך של fp32, כך שכמעט לעולם לא עולה על גדותיו ולא צריך loss scaling — לכן הוא מועדף על GPUים שתומכים בו (Ampere ומעלה). משקלי-אב ומצב האופטימייזר נשארים fp32; רק חישוב הפורוורד/בקוורד הוא 16 ביט (autocast).",
+      },
+      advanced: {
+        en: "Autocast runs matmuls/convs in low precision while keeping reductions, softmax, and norm stats in fp32. fp16 needs a GradScaler (dynamic loss scaling to avoid gradient underflow); bf16 usually doesn't. Beyond bf16: fp8 (E4M3/E5M2) training on Hopper/Ada with per-tensor scaling, and int8/4 for inference. Trade-off is range vs precision — bf16 trades mantissa bits for exponent range, which matters more for training stability than raw precision. Our trainer sets bf16/fp16 from hardware.detect().",
+        he: "Autocast מריץ matmuls/convs בדיוק נמוך תוך שמירת reductions, softmax, וסטטיסטיקות norm ב-fp32. fp16 דורש GradScaler (loss scaling דינמי למניעת underflow בגרדיאנטים); bf16 לרוב לא. מעבר ל-bf16: אימון fp8 (E4M3/E5M2) על Hopper/Ada עם scaling פר-טנזור, ו-int8/4 להסקה. הפשרה היא טווח מול דיוק — bf16 מחליף ביטי מנטיסה בטווח מעריך, מה שחשוב יותר ליציבות אימון מאשר דיוק גולמי. הטריינר שלנו קובע bf16/fp16 מ-hardware.detect().",
+      },
+    },
+  },
+
+  quantization: {
+    title: { en: "Quantization", he: "קוונטיזציה (Quantization)" },
+    levels: {
+      beginner: {
+        en: "Quantization shrinks a model by storing its weights with fewer bits — like saving a photo as a smaller JPEG. A model that needs 16-bit numbers might be squeezed to 8-bit or even 4-bit, cutting its memory to a quarter. That's how a model that wouldn't fit on your GPU suddenly runs on it. There's a small quality cost, but for many uses it's barely noticeable.",
+        he: "קוונטיזציה מכווצת מודל ע\"י שמירת המשקלים שלו בפחות ביטים — כמו לשמור תמונה כ-JPEG קטן יותר. מודל שצריך מספרים של 16 ביט אפשר לדחוס ל-8 ביט או אפילו 4 ביט, וכך לחתוך את הזיכרון לרבע. ככה מודל שלא היה נכנס ל-GPU שלך פתאום רץ עליו. יש מחיר איכות קטן, אבל לשימושים רבים הוא כמעט לא מורגש.",
+      },
+      intermediate: {
+        en: "Map high-precision weights to a small set of low-bit levels via a scale (and maybe zero-point). Two families: post-training quantization (PTQ — quantize an already-trained model, e.g. GPTQ, AWQ, bitsandbytes nf4) and quantization-aware training (QAT — simulate quantization during training for better accuracy). Inference in 4-bit can cut VRAM ~4× with modest perplexity loss. This is the 'Q' that makes QLoRA possible: load the base model in 4-bit, train small adapters on top.",
+        he: "ממפים משקלים בדיוק גבוה לקבוצה קטנה של רמות לואו-ביט דרך scale (ואולי zero-point). שתי משפחות: קוונטיזציה אחרי אימון (PTQ — מכמתים מודל מאומן, למשל GPTQ, AWQ, bitsandbytes nf4) וקוונטיזציה מודעת-אימון (QAT — מדמים קוונטיזציה תוך כדי אימון לדיוק טוב יותר). הסקה ב-4 ביט יכולה לחתוך VRAM פי ~4 עם אובדן perplexity מתון. זה ה-'Q' שמאפשר QLoRA: טוענים את מודל הבסיס ב-4 ביט, מאמנים מתאמים קטנים מעליו.",
+      },
+      advanced: {
+        en: "Per-tensor vs per-channel vs per-group scales trade accuracy for overhead; outlier-aware methods (LLM.int8's mixed-precision decomposition, AWQ's activation-aware scaling, SmoothQuant's migration of activation scale into weights) handle the heavy-tailed activations that naive int8 destroys. nf4 (QLoRA) is a 4-bit 'normal float' matched to weight distributions, plus double quantization of the scales. Calibration data choice materially affects PTQ quality; KV-cache quantization is the next frontier for long-context inference.",
+        he: "scales פר-טנזור מול פר-ערוץ מול פר-קבוצה מחליפים דיוק בתקורה; שיטות מודעות-חריגים (פירוק דיוק-מעורב של LLM.int8, scaling מודע-אקטיבציה של AWQ, העברת scale האקטיבציה למשקלים של SmoothQuant) מטפלות באקטיבציות בעלות זנב כבד ש-int8 נאיבי הורס. nf4 (QLoRA) הוא 'normal float' של 4 ביט מותאם להתפלגות המשקלים, ועוד קוונטיזציה כפולה של ה-scales. בחירת נתוני הכיול משפיעה מהותית על איכות PTQ; קוונטיזציה של KV-cache היא החזית הבאה להסקה ארוכת-הקשר.",
+      },
+    },
+  },
+
+  lora: {
+    title: { en: "LoRA — train big models cheaply", he: "LoRA — לאמן מודלים גדולים בזול" },
+    levels: {
+      beginner: {
+        en: "Fully fine-tuning a big model means updating billions of weights — huge memory, huge cost. LoRA is a shortcut: freeze the whole original model and train only a tiny pair of extra matrices bolted onto each layer. You end up changing well under 1% of the parameters, yet you can still teach the model a new skill or style. The little file you save (the 'adapter') is megabytes, not gigabytes, and you can swap different adapters in and out.",
+        he: "fine-tuning מלא של מודל גדול אומר לעדכן מיליארדי משקלים — זיכרון עצום, עלות עצומה. LoRA הוא קיצור דרך: מקפיאים את כל המודל המקורי ומאמנים רק זוג זעיר של מטריצות נוספות שמחוברות לכל שכבה. בסוף משנים הרבה פחות מ-1% מהפרמטרים, ועדיין אפשר ללמד את המודל מיומנות או סגנון חדשים. הקובץ הקטן שנשמר (ה'אדפטר') הוא מגה-בייטים, לא ג'יגה-בייטים, ואפשר להחליף אדפטרים שונים פנימה והחוצה.",
+      },
+      intermediate: {
+        en: "LoRA = Low-Rank Adaptation. For a frozen weight W, it adds a low-rank update ΔW = B·A where A is r×k and B is d×r with rank r tiny (8–64). Only A and B train; W stays frozen. Because r≪d, you train orders of magnitude fewer params and store a small adapter. At inference you can keep it separate (swap adapters) or merge it (ΔW added back into W, zero extra latency). Common knobs: rank r, alpha (scaling), which modules to target (often q/v projections).",
+        he: "LoRA = Low-Rank Adaptation. עבור משקל קפוא W, מוסיפים עדכון דרגה-נמוכה ΔW = B·A כאשר A הוא r×k ו-B הוא d×r עם דרגה r זעירה (8–64). רק A ו-B מתאמנים; W נשאר קפוא. מכיוון ש-r≪d, מאמנים סדרי גודל פחות פרמטרים ושומרים אדפטר קטן. בהסקה אפשר להשאיר אותו נפרד (להחליף אדפטרים) או למזג אותו (ΔW נוסף חזרה ל-W, אפס latency נוסף). כפתורים נפוצים: דרגה r, alpha (scaling), אילו מודולים למקד (לרוב הטלות q/v).",
+      },
+      advanced: {
+        en: "ΔW = (α/r)·BA, A~N(0,σ²), B=0 at init so training starts as a no-op. The bet: fine-tuning updates have low 'intrinsic rank', so a rank-r factorization captures most of the useful change. Trains only ~0.1–1% of params, slashing optimizer-state memory (the real fine-tuning bottleneck). Variants: DoRA (decompose magnitude/direction), rsLoRA (rank-stabilized scaling), VeRA (shared random bases). Merging is exact and latency-free; serving many merged variants needs many copies, so adapter-swapping wins for multi-tenant.",
+        he: "ΔW = (α/r)·BA, A~N(0,σ²), B=0 באתחול כך שהאימון מתחיל כ-no-op. ההימור: עדכוני fine-tuning הם בעלי 'דרגה אינטרינזית' נמוכה, כך שפירוק דרגה-r לוכד את רוב השינוי המועיל. מאמן רק ~0.1–1% מהפרמטרים, וחותך את זיכרון מצב-האופטימייזר (צוואר הבקבוק האמיתי ב-fine-tuning). וריאנטים: DoRA (פירוק עוצמה/כיוון), rsLoRA (scaling מיוצב-דרגה), VeRA (בסיסים אקראיים משותפים). המיזוג מדויק וחסר-latency; הגשת וריאנטים ממוזגים רבים דורשת עותקים רבים, ולכן החלפת-אדפטרים מנצחת ל-multi-tenant.",
+      },
+    },
+  },
+
+  qlora: {
+    title: { en: "QLoRA — LoRA on a quantized base", he: "QLoRA — LoRA על בסיס מקוונטז" },
+    levels: {
+      beginner: {
+        en: "QLoRA combines two tricks so you can fine-tune surprisingly large models on a single modest GPU. First, load the big base model in 4-bit so it barely takes any memory (quantization). Then train small LoRA adapters on top of it. Together: the frozen giant is cheap to hold in memory, and the tiny trainable part is cheap to train. Models that used to need a server farm became trainable on one consumer card.",
+        he: "QLoRA משלב שני טריקים כדי שתוכל לעשות fine-tuning למודלים גדולים להפתיע על GPU צנוע יחיד. ראשית, טוענים את מודל הבסיס הגדול ב-4 ביט כך שהוא כמעט לא תופס זיכרון (קוונטיזציה). אז מאמנים אדפטרי LoRA קטנים מעליו. ביחד: הענק הקפוא זול להחזקה בזיכרון, והחלק הזעיר הניתן-לאימון זול לאימון. מודלים שפעם הצריכו חוות שרתים נהיו ניתנים לאימון על כרטיס צרכני אחד.",
+      },
+      intermediate: {
+        en: "QLoRA = quantize the frozen base to 4-bit (nf4) + train LoRA adapters in 16-bit on top. Gradients flow THROUGH the 4-bit frozen weights into the adapters (the base is never updated). Key pieces: nf4 (an information-theoretically nice 4-bit datatype for normally-distributed weights), double quantization (quantize the quantization constants too), and paged optimizers (spill optimizer state to CPU on memory spikes). Net effect: fine-tune a 65B model on a single 48GB GPU.",
+        he: "QLoRA = מכמתים את הבסיס הקפוא ל-4 ביט (nf4) + מאמנים אדפטרי LoRA ב-16 ביט מעליו. גרדיאנטים זורמים דרך המשקלים הקפואים של 4 הביט אל תוך האדפטרים (הבסיס לעולם לא מתעדכן). חלקים מרכזיים: nf4 (טיפוס נתונים יפה תיאורטית-אינפורמטיבית של 4 ביט למשקלים בהתפלגות נורמלית), קוונטיזציה כפולה (מכמתים גם את קבועי הקוונטיזציה), ואופטימייזרים מ-paged (שופכים את מצב האופטימייזר ל-CPU בקפיצות זיכרון). אפקט נטו: fine-tuning למודל 65B על GPU יחיד של 48GB.",
+      },
+      advanced: {
+        en: "Forward pass dequantizes nf4 weights to bf16 on the fly per-block, computes, discards — so the 4-bit storage is the only persistent footprint while compute stays bf16. nf4 assumes zero-mean normal weights and uses quantiles of N(0,1) as levels; double quant stores the per-block absmax constants in 8-bit to save ~0.4 bits/param. Paged optimizers use NVIDIA unified memory to survive length-spike OOMs. Quality matches 16-bit LoRA on most benchmarks; the main cost is slower throughput from on-the-fly dequant.",
+        he: "המעבר קדימה מבטל-קוונטיזציה של משקלי nf4 ל-bf16 תוך כדי תנועה פר-בלוק, מחשב, וזורק — כך שאחסון 4 הביט הוא טביעת-הרגל הקבועה היחידה בעוד החישוב נשאר bf16. nf4 מניח משקלים נורמליים ממוצע-אפס ומשתמש בקוונטילים של N(0,1) כרמות; קוונטיזציה כפולה שומרת את קבועי ה-absmax הפר-בלוק ב-8 ביט כדי לחסוך ~0.4 ביט/פרמטר. אופטימייזרים מ-paged משתמשים בזיכרון מאוחד של NVIDIA כדי לשרוד OOM בקפיצות אורך. האיכות משתווה ל-LoRA של 16 ביט ברוב המבחנים; המחיר העיקרי הוא תפוקה איטית יותר מביטול-הקוונטיזציה תוך-כדי.",
+      },
+    },
+  },
+
+  confusion_matrix: {
+    title: { en: "Confusion matrix & evaluation metrics", he: "מטריצת בלבול ומדדי הערכה" },
+    levels: {
+      beginner: {
+        en: "A confusion matrix is a simple grid that shows exactly WHERE a classifier gets things right and wrong. Rows are the true answer, columns are the model's guess. The diagonal is the correct cases; everything off the diagonal is a specific mistake (e.g. 'it called 3 reasoning prompts code'). Accuracy alone hides this — the matrix shows you which classes get mixed up, so you know what data to add.",
+        he: "מטריצת בלבול היא רשת פשוטה שמראה בדיוק איפה מסווג צודק וטועה. השורות הן התשובה האמיתית, העמודות הן הניחוש של המודל. האלכסון הוא המקרים הנכונים; כל מה שמחוץ לאלכסון הוא טעות ספציפית (למשל 'הוא קרא ל-3 פרומפטים של reasoning בשם code'). דיוק לבד מסתיר את זה — המטריצה מראה לך אילו מחלקות מתבלבלות, כך שתדע איזה דאטה להוסיף.",
+      },
+      intermediate: {
+        en: "From the matrix you derive per-class metrics. Precision = of everything I labeled X, how much really was X (cost of false alarms). Recall = of all real X, how much did I catch (cost of misses). F1 = their harmonic mean. Accuracy misleads on imbalanced data (99% accuracy is trivial if 99% of data is one class), which is why we report weighted/macro F1. scikit-learn's classification_report + confusion_matrix give all of this in two function calls.",
+        he: "מהמטריצה גוזרים מדדים פר-מחלקה. Precision = מכל מה שתייגתי כ-X, כמה באמת היה X (מחיר אזעקות שווא). Recall = מכל ה-X האמיתי, כמה תפסתי (מחיר החמצות). F1 = הממוצע ההרמוני שלהם. דיוק מטעה בדאטה לא-מאוזן (99% דיוק טריוויאלי אם 99% מהדאטה הוא מחלקה אחת), ולכן מדווחים F1 משוקלל/מאקרו. classification_report + confusion_matrix של scikit-learn נותנים את כל זה בשתי קריאות פונקציה.",
+      },
+      advanced: {
+        en: "Macro-F1 averages per-class F1 equally (sensitive to rare classes); micro-F1 pools TP/FP/FN globally (= accuracy in single-label); weighted-F1 weights by support. For ranked outputs use ROC-AUC (threshold-independent, but optimistic under heavy imbalance) vs PR-AUC (better for rare positives). Calibration (ECE, reliability diagrams) matters when you act on the probabilities, not just the argmax — directly relevant to a router with abstention thresholds. Always evaluate on a held-out set with the same preprocessing, and watch for label leakage.",
+        he: "Macro-F1 ממצע F1 פר-מחלקה באופן שווה (רגיש למחלקות נדירות); micro-F1 מאגד TP/FP/FN גלובלית (= דיוק בתיוג-יחיד); weighted-F1 משקלל לפי support. לפלטים מדורגים השתמש ב-ROC-AUC (בלתי-תלוי-סף, אך אופטימי תחת חוסר-איזון כבד) מול PR-AUC (טוב יותר לחיוביים נדירים). כיול (ECE, דיאגרמות מהימנות) חשוב כשפועלים לפי ההסתברויות, לא רק ה-argmax — רלוונטי ישירות לראוטר עם ספי הימנעות. תמיד הערך על סט מוחזק עם אותו עיבוד מקדים, והיזהר מדליפת תוויות.",
       },
     },
   },
