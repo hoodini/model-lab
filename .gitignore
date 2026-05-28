@@ -1,0 +1,22 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+backend/checkpoints/
+backend/runs/
+*.log
+
+# Node / Next
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Datasets / model artifacts (keep seed, ignore generated)
+backend/data/user_*.jsonl
+*.safetensors
+*.bin

@@ -1,0 +1,22 @@
+# ── Web server ────────────────────────────────────────────────
+# FastAPI is the framework that exposes our training engine over HTTP
+# so the website (frontend) can talk to it. "uvicorn" is the actual
+# server process that runs FastAPI.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# ── The machine-learning core ─────────────────────────────────
+# torch        = the math engine (tensors + autograd) that runs on your GPU.
+# transformers = HuggingFace library with pre-built models + tokenizers.
+# datasets     = HuggingFace data handling (load, map, batch, split).
+# accelerate   = makes Trainer place tensors on the GPU automatically.
+# scikit-learn = used here only for accuracy / F1 metric helpers.
+#
+# NOTE: torch is intentionally NOT pinned here because the correct build
+# depends on your CUDA version. We install it separately with the right
+# index URL (see backend/README or the setup step) so it talks to the 4090.
+transformers==4.48.0
+datasets==3.2.0
+accelerate==1.2.1
+scikit-learn==1.6.0

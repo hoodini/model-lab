@@ -1,0 +1,162 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Model Lab — global styles
+   Palette mode: FLY HIGH (purple / yellow / grey) — the yuv-design-system
+   default for dev-facing tools. Tokens copied from the design system.
+─────────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500&family=Rubik:wght@400;500;600;700;800;900&family=Assistant:wght@400;500;600;700&display=swap');
+
+:root {
+  --yuv-purple: #5E17EB;
+  --yuv-purple-dark: #3D0DA8;
+  --yuv-yellow: #FFEC00;
+  --yuv-grey: #F1F2F2;
+  --yuv-grey-dark: #D4D6D6;
+  --yuv-white: #FFFFFF;
+  --yuv-black: #000000;
+
+  --font-display: 'Anton', 'Rubik', system-ui, sans-serif;
+  --font-display-he: 'Rubik', 'Anton', system-ui, sans-serif;
+  --font-body: 'Inter', 'Assistant', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  --maxw: 1240px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--yuv-grey);   /* never pure #FFFFFF as the root */
+  color: var(--yuv-black);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hebrew bodies use Assistant; display uses Rubik. dir flips via [dir]. */
+[dir='rtl'] { font-family: 'Assistant', var(--font-body); }
+[dir='rtl'] .display { font-family: var(--font-display-he); text-transform: none; }
+
+/* ── Headlines: Anton uppercase, letter-spacing 0 (Anton is condensed) ──── */
+.display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0;
+  line-height: 1.02;
+}
+
+.mono { font-family: var(--font-mono); }
+
+/* ── Section backgrounds: the two-background rule ───────────────────────── */
+.act {                              /* purple "act" section */
+  background: var(--yuv-purple);
+  color: var(--yuv-white);
+}
+.content {                          /* grey "content" section */
+  background: var(--yuv-grey);
+  color: var(--yuv-black);
+}
+
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+.section { padding: 96px 0; }
+
+/* ── The signature purple accent bar to the left of a headline ──────────── */
+.purple-bar {
+  display: inline-block;
+  width: 8px;
+  background: var(--yuv-purple);
+  align-self: stretch;
+}
+.act .purple-bar { background: var(--yuv-yellow); }  /* on purple, the bar is yellow */
+
+/* ── The yellow highlight span (em-based padding, positive tracking) ────── */
+.hl {
+  display: inline-block;
+  background: var(--yuv-yellow);
+  color: #000;
+  padding: 0.06em 0.34em;
+  letter-spacing: 0.01em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ── Cards: flat, radius 0, no AI-slop soft shadow ──────────────────────── */
+.card {
+  background: var(--yuv-white);
+  border: 2px solid var(--yuv-black);
+  border-radius: 0;
+  padding: 24px;
+}
+
+/* ── Buttons: radius 0 or 999px only ────────────────────────────────────── */
+.btn {
+  font-family: var(--font-body);
+  font-weight: 700;
+  border: 2px solid var(--yuv-black);
+  border-radius: 0;
+  background: var(--yuv-black);
+  color: var(--yuv-white);
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn-yellow { background: var(--yuv-yellow); color: #000; border-color: #000; }
+.btn-purple { background: var(--yuv-purple); color: #fff; border-color: var(--yuv-purple); }
+.btn-pill { border-radius: 999px; }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+input, textarea, select {
+  font-family: var(--font-body);
+  border: 2px solid var(--yuv-black);
+  border-radius: 0;
+  padding: 10px 12px;
+  background: #fff;
+  color: #000;
+  width: 100%;
+}
+
+/* ── Small pill tag ─────────────────────────────────────────────────────── */
+.tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-size: 13px;
+  opacity: .8;
+}
+
+/* ── GSAP reveal initial states ─────────────────────────────────────────── */
+.reveal { opacity: 0; transform: translateY(24px); }
+
+/* ── Top control bar — shrink so the language toggle stays reachable on phones ── */
+.topbar-group { display: flex; align-items: center; gap: 18px; }
+.level-switch { display: flex; border: 2px solid #fff; border-radius: 999px; overflow: hidden; }
+.level-switch button { padding: 7px 14px; font-size: 12px; }
+
+/* Loss chart + metrics stack vertically before they get too cramped to read. */
+@media (max-width: 768px) {
+  .train-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  /* Stack the bar into two centered rows so the language toggle is never clipped. */
+  .topbar-inner { flex-wrap: wrap; height: auto !important; padding-top: 10px; padding-bottom: 10px; gap: 10px !important; justify-content: center; }
+  .topbar-brand { width: 100%; text-align: center; font-size: 19px; }
+  .topbar-group { width: 100%; justify-content: center; gap: 8px; }
+  .level-switch button { padding: 6px 8px; font-size: 10px; letter-spacing: .02em; }
+  .lang-toggle { padding: 6px 12px !important; font-size: 13px; }
+}
