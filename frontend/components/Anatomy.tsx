@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useLab } from "./providers";
 import { Explain } from "./Explain";
-import { tokenize as apiTokenize } from "@/lib/api";
+import { tokenize as apiTokenize, inspect as apiInspect, type Inspect } from "@/lib/api";
 
 /* ───────────────────────────────────────────────────────────────────────────
    "Under the Hood" — trace a real prompt through every stage of the router,
@@ -22,8 +22,9 @@ const LANES: Lane[] = [
   { key: "creative", en: "Creative", he: "יצירתי" },
 ];
 
-// Deterministic pseudo-random so the same prompt always paints the same
-// heatmaps (real attention is learned, but we want a stable, believable demo).
+// Deterministic pseudo-random — used ONLY as an offline fallback when the
+// backend is unreachable. When the backend is up, every embedding and
+// attention value below is the model's real output (see /api/inspect).
 function hashStr(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {
@@ -98,6 +99,8 @@ export function Anatomy() {
   const [stage, setStage] = useState(0);
   const [prompt, setPrompt] = useState(lang === "he" ? DEFAULT_HE : DEFAULT_EN);
   const [tokens, setTokens] = useState<{ piece: string; id: number }[]>([]);
+  const [insp, setInsp] = useState<Inspect | null>(null);
+  const [live, setLive] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Swap the default prompt when language flips (only if user hasn't edited).
@@ -127,19 +130,49 @@ export function Anatomy() {
     };
   }, [prompt]);
 
-  const seed = useMemo(() => hashStr(prompt), [prompt]);
-  const n = Math.min(tokens.length, 12) || 1;
+  // Fetch the model's REAL internals (embeddings + attention) for this prompt.
+  // Debounced so we don't hammer the backend on every keystroke. Falls back to
+  // the deterministic offline demo if the backend is unreachable.
+  useEffect(() => {
+    let live = true;
+    const id = setTimeout(() => {
+      apiInspect(prompt)
+        .then((r) => {
+          if (!live) return;
+          if (r?.tokens?.length) { setInsp(r); setLive(true); }
+          else { setInsp(null); setLive(false); }
+        })
+        .catch(() => { if (live) { setInsp(null); setLive(false); } });
+    }, 350);
+    return () => { live = false; clearTimeout(id); };
+  }, [prompt]);
 
-  // Per-token embedding strips (16 dims each), deterministic from seed+token.
+  const seed = useMemo(() => hashStr(prompt), [prompt]);
+  // When live, drive the visuals off the model's real token count. The inspect
+  // and tokenize endpoints share a tokenizer, so positions stay aligned.
+  const n = Math.min((insp?.tokens.length ?? tokens.length), 12) || 1;
+
+  // Per-token embedding strips. REAL: the model's input-embedding vectors,
+  // min-max normalised to 0..1 purely for colour mapping (values stay faithful
+  // to their relative magnitude). Offline fallback: deterministic per token.
   const embRows = useMemo(() => {
+    if (insp?.embeddings?.length) {
+      const flat = insp.embeddings.flat();
+      const lo = Math.min(...flat);
+      const hi = Math.max(...flat);
+      const span = hi - lo || 1;
+      return insp.embeddings.map((row) => row.map((v) => (v - lo) / span));
+    }
     return tokens.slice(0, 12).map((tk) => {
       const r = mulberry32(seed ^ tk.id);
       return Array.from({ length: 16 }, () => r());
     });
-  }, [tokens, seed]);
+  }, [insp, tokens, seed]);
 
-  // Self-attention matrix n×n (rows attend to cols), softmaxed per row.
+  // Self-attention matrix n×n (rows attend to cols). REAL: averaged over heads
+  // from the model's last layer (already softmaxed, sums to 1 per row).
   const attn = useMemo(() => {
+    if (insp?.attention?.length) return insp.attention;
     const r = mulberry32(seed + 7);
     const m = Array.from({ length: n }, () => Array.from({ length: n }, () => r()));
     return m.map((row) => {
@@ -147,10 +180,11 @@ export function Anatomy() {
       const s = exp.reduce((a, b) => a + b, 0);
       return exp.map((x) => x / s);
     });
-  }, [n, seed]);
+  }, [insp, n, seed]);
 
-  // 4 heads = 4 different attention patterns from offset seeds.
+  // Individual attention heads. REAL: the model's per-head matrices.
   const heads = useMemo(() => {
+    if (insp?.heads?.length) return insp.heads;
     return [0, 1, 2, 3].map((h) => {
       const r = mulberry32(seed + 31 * (h + 1));
       const m = Array.from({ length: n }, () => Array.from({ length: n }, () => r()));
@@ -160,7 +194,7 @@ export function Anatomy() {
         return exp.map((x) => x / s);
       });
     });
-  }, [n, seed]);
+  }, [insp, n, seed]);
 
   // Logits + softmax over the 4 lanes.
   const logits = useMemo(() => {
@@ -275,6 +309,17 @@ export function Anatomy() {
               {String(stage + 1).padStart(2, "0")}
             </div>
             <div className="display" style={{ fontSize: 26 }}>{cur[lang]}</div>
+            {live && (cur.id === "embed" || cur.id === "encoder") && (
+              <span className="mono" style={{
+                marginInlineStart: "auto", fontSize: 11, fontWeight: 700,
+                color: "#000", background: "var(--yuv-yellow)", padding: "3px 10px",
+                textTransform: "uppercase", letterSpacing: ".06em",
+                display: "inline-flex", alignItems: "center", gap: 6,
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: 999, background: "#000", display: "inline-block" }} />
+                {t("Live from model", "חי מהמודל")}
+              </span>
+            )}
           </div>
 
           <div style={{ marginTop: 20 }}>
@@ -284,6 +329,7 @@ export function Anatomy() {
               t={t}
               prompt={prompt}
               tokens={tokens}
+              live={live}
               embRows={embRows}
               attn={attn}
               heads={heads}
@@ -335,6 +381,7 @@ function StageBody(props: {
   t: (en: string, he: string) => string;
   prompt: string;
   tokens: { piece: string; id: number }[];
+  live: boolean;
   embRows: number[][];
   attn: number[][];
   heads: number[][][];
@@ -344,7 +391,7 @@ function StageBody(props: {
   probs: number[];
   winner: number;
 }) {
-  const { stage, lang, t, prompt, tokens, embRows, attn, heads, encTab, setEncTab, logits, probs, winner } = props;
+  const { stage, lang, t, prompt, tokens, live, embRows, attn, heads, encTab, setEncTab, logits, probs, winner } = props;
   const shown = tokens.slice(0, 12);
 
   if (stage === "text") {
@@ -451,10 +498,15 @@ function StageBody(props: {
           )}
         </p>
         <p className="mono" style={{ marginTop: 8, fontSize: 11, opacity: 0.55 }}>
-          {t(
-            "Note: the values shown here are illustrative (deterministically generated per token) so you can see the structure. The real vectors come from the model's weights.",
-            "הערה: הערכים כאן הם להמחשה (נוצרים דטרמיניסטית לכל טוקן) כדי שתראו את המבנה. הוקטורים האמיתיים מגיעים ממשקלי המודל."
-          )}
+          {live
+            ? t(
+                "These are the model's REAL input-embedding values for your prompt (first 16 of 768 dims), pulled live from a forward pass. Colour is min-max normalised so the range is visible.",
+                "אלו ערכי האמבדינג האמיתיים של המודל עבור הפרומפט שלך (16 מתוך 768 מימדים), נשלפים חי ממעבר קדימה. הצבע מנורמל מינ-מקס כדי שהטווח ייראה."
+              )
+            : t(
+                "Backend offline — showing an illustrative pattern. Start the API to see the model's real embedding values here.",
+                "השרת לא זמין — מוצג דפוס להמחשה. הפעילו את ה-API כדי לראות כאן את ערכי האמבדינג האמיתיים של המודל."
+              )}
         </p>
       </div>
     );

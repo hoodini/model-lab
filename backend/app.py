@@ -27,6 +27,7 @@ from pydantic import BaseModel
 from data.router_seed import get_seed, LABEL_IDS
 from training.router_trainer import train_router
 from training import predict as predictor
+from training import inspect as inspector
 
 app = FastAPI(title="Model Lab API")
 
@@ -67,6 +68,11 @@ class InferRequest(BaseModel):
 
 
 class TokenizeRequest(BaseModel):
+    text: str
+    base_model: str = "distilbert-base-multilingual-cased"
+
+
+class InspectRequest(BaseModel):
     text: str
     base_model: str = "distilbert-base-multilingual-cased"
 
@@ -171,6 +177,14 @@ def tokenize(req: TokenizeRequest):
         "count": len(ids),
         "tokens": [{"piece": p, "id": int(i)} for p, i in zip(pieces, ids)],
     }
+
+
+# ── Real model internals for the "Under the Hood" visualiser ─────────────────
+# Runs the actual base model and returns real token embeddings + real
+# self-attention so the visualiser draws the model's true numbers, not a demo.
+@app.post("/api/inspect")
+def inspect(req: InspectRequest):
+    return inspector.inspect(req.text, req.base_model)
 
 
 @app.post("/api/infer")

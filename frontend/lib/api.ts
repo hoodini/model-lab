@@ -52,6 +52,27 @@ export async function tokenize(text: string, base_model?: string): Promise<{ cou
   return r.json();
 }
 
+export type Inspect = {
+  tokens: { piece: string; id: number }[];
+  embeddings: number[][];
+  attention: number[][];
+  heads: number[][][];
+  hidden_size: number;
+  num_heads: number;
+  num_layers: number;
+};
+
+// Real model internals (embeddings + attention) from a live forward pass.
+export async function inspect(text: string, base_model?: string): Promise<Inspect> {
+  const r = await fetch(`${BASE}/api/inspect`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, base_model }),
+  });
+  if (!r.ok) throw new Error(`inspect ${r.status}`);
+  return r.json();
+}
+
 export async function infer(text: string) {
   const r = await fetch(`${BASE}/api/infer`, {
     method: "POST",
