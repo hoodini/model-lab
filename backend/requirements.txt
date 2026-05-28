@@ -14,8 +14,9 @@ pydantic==2.10.4
 # scikit-learn = used here only for accuracy / F1 metric helpers.
 #
 # NOTE: torch is intentionally NOT pinned here because the correct build
-# depends on your CUDA version. We install it separately with the right
-# index URL (see backend/README or the setup step) so it talks to the 4090.
+# depends on your hardware (CUDA version, or CPU-only). Install it
+# separately with the right index URL (see the README setup step) so it
+# matches whatever GPU/CPU you have — the app auto-detects the device.
 transformers==4.48.0
 datasets==3.2.0
 accelerate==1.2.1

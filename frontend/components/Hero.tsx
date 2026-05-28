@@ -35,7 +35,7 @@ export function Hero() {
 
       <div className="wrap" style={{ position: "relative", zIndex: 2 }}>
         <div className="reveal eyebrow" style={{ color: "var(--yuv-yellow)", marginBottom: 20 }}>
-          {t("TRAIN AI · FROM ZERO · ON YOUR OWN GPU", "אימון AI · מאפס · על ה-GPU שלך")}
+          {t("TRAIN AI · FROM ZERO · ON YOUR OWN HARDWARE", "אימון AI · מאפס · על החומרה שלך")}
         </div>
 
         <h1 className="reveal display" style={{ fontSize: "clamp(44px, 8vw, 104px)", color: "#fff", maxWidth: 980 }}>
@@ -54,8 +54,8 @@ export function Hero() {
 
         <p className="reveal" style={{ fontSize: 20, color: "#EDE7FF", maxWidth: 620, marginTop: 24, lineHeight: 1.6 }}>
           {t(
-            "No magic, no black boxes. We train a real model on your RTX 4090 and explain every concept at your level — beginner to advanced, in English and Hebrew.",
-            "בלי קסמים, בלי קופסאות שחורות. נאמן מודל אמיתי על ה-RTX 4090 שלך ונסביר כל מושג ברמה שלך — ממתחיל ועד מתקדם, באנגלית ובעברית."
+            "No magic, no black boxes. We train a real model on whatever hardware you have — the app auto-detects your GPU or CPU and picks the best settings — and explain every concept at your level, beginner to advanced, in English and Hebrew.",
+            "בלי קסמים, בלי קופסאות שחורות. נאמן מודל אמיתי על כל חומרה שיש לך — האפליקציה מזהה אוטומטית GPU או CPU ובוחרת את ההגדרות הטובות ביותר — ונסביר כל מושג ברמה שלך, ממתחיל ועד מתקדם, באנגלית ובעברית."
           )}
         </p>
 

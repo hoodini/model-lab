@@ -61,8 +61,8 @@ export const CONCEPTS: Record<string, Explain> = {
         he: "זה 'transfer learning'. האנקודר המאומן כבר מקודד דקדוק ומשמעות; הכוונון בעיקר מתאים את השכבות העליונות + ראש הסיווג החדש. ברירת המחדל היא distilbert-base-multilingual-cased: קטן (~134M פרמטרים), מהיר, ומבין עברית.",
       },
       advanced: {
-        en: "Encoder-only (BERT-family) is the right inductive bias for classification — bidirectional attention, [CLS] pooling. Alternatives: XLM-RoBERTa (stronger, heavier), or a Hebrew-specific encoder (AlephBERT/HeRo). On a 4090 you can fine-tune all of these full-parameter; reserve LoRA for the generative stages.",
-        he: "אנקודר-בלבד (משפחת BERT) הוא ה-inductive bias הנכון לסיווג — attention דו-כיווני, pooling דרך [CLS]. חלופות: XLM-RoBERTa (חזק יותר, כבד יותר), או אנקודר עברי ייעודי (AlephBERT/HeRo). על 4090 אפשר לכוונן את כולם ב-full-parameter; שמור LoRA לשלבים הגנרטיביים.",
+        en: "Encoder-only (BERT-family) is the right inductive bias for classification — bidirectional attention, [CLS] pooling. Alternatives: XLM-RoBERTa (stronger, heavier), or a Hebrew-specific encoder (AlephBERT/HeRo). A small encoder like this fine-tunes full-parameter on almost any modern GPU; reserve LoRA for the larger generative stages where memory is tight.",
+        he: "אנקודר-בלבד (משפחת BERT) הוא ה-inductive bias הנכון לסיווג — attention דו-כיווני, pooling דרך [CLS]. חלופות: XLM-RoBERTa (חזק יותר, כבד יותר), או אנקודר עברי ייעודי (AlephBERT/HeRo). אנקודר קטן כזה מתכוונן ב-full-parameter כמעט על כל GPU מודרני; שמור LoRA לשלבים הגנרטיביים הגדולים יותר שבהם הזיכרון צפוף.",
       },
     },
   },
@@ -111,8 +111,8 @@ export const CONCEPTS: Record<string, Explain> = {
         he: "כמה דוגמאות המודל רואה לפני שהוא מבצע תיקון אחד. אצווה גדולה = למידה חלקה ויציבה יותר אבל צורכת יותר זיכרון GPU. אצווה קטנה = רועשת יותר אבל קלה יותר.",
       },
       intermediate: {
-        en: "Examples processed per optimizer step. It trades GPU memory for gradient stability. If you hit an out-of-memory error, halve the batch size. On a 24GB 4090 you have lots of headroom for a small encoder — 8 to 32 is comfortable.",
-        he: "דוגמאות המעובדות בכל צעד אופטימייזר. מאזן בין זיכרון GPU ליציבות הגרדיאנט. אם קיבלת שגיאת out-of-memory, חצה את גודל האצווה. על 4090 עם 24GB יש המון מרווח לאנקודר קטן — 8 עד 32 נוח.",
+        en: "Examples processed per optimizer step. It trades memory for gradient stability. If you hit an out-of-memory error, halve the batch size. For a small encoder like this, 8 to 32 is comfortable on most GPUs; on CPU keep it small (4–8) and expect it to be slower.",
+        he: "דוגמאות המעובדות בכל צעד אופטימייזר. מאזן בין זיכרון ליציבות הגרדיאנט. אם קיבלת שגיאת out-of-memory, חצה את גודל האצווה. לאנקודר קטן כזה, 8 עד 32 נוח על רוב כרטיסי ה-GPU; על CPU שמור על ערך קטן (4–8) וצפה לאיטיות.",
       },
       advanced: {
         en: "Sets gradient-estimate variance. Larger batch → lower-variance gradients, often allowing a higher LR (linear scaling rule). Use gradient accumulation to simulate large batches under VRAM limits. Watch the noise scale: tiny datasets can prefer smaller batches for regularization.",
