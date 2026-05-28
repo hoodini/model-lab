@@ -6,8 +6,8 @@ export type Label = {
 };
 export type Row = { text: string; label: string };
 
-export async function getDataset(): Promise<{ labels: Label[]; rows: Row[] }> {
-  const r = await fetch(`${BASE}/api/dataset`);
+export async function getDataset(task = "router"): Promise<{ labels: Label[]; rows: Row[] }> {
+  const r = await fetch(`${BASE}/api/dataset?task=${encodeURIComponent(task)}`);
   return r.json();
 }
 
@@ -18,6 +18,7 @@ export async function getHealth() {
 
 export type TrainConfig = {
   rows: Row[];
+  task?: string;
   base_model: string;
   epochs: number;
   lr: number;
@@ -89,24 +90,24 @@ export type Evals = {
 };
 
 // Confusion matrix + per-class metrics for the latest trained model.
-export async function getEvals(): Promise<Evals> {
-  const r = await fetch(`${BASE}/api/evals`);
+export async function getEvals(task = "router"): Promise<Evals> {
+  const r = await fetch(`${BASE}/api/evals?task=${encodeURIComponent(task)}`);
   return r.json();
 }
 
 // Trigger a browser download of the trained model as a .zip.
-export function exportZipUrl(): string {
-  return `${BASE}/api/export/zip`;
+export function exportZipUrl(task = "router"): string {
+  return `${BASE}/api/export/zip?task=${encodeURIComponent(task)}`;
 }
 
 export type HubResult = { url?: string; repo_id?: string; user?: string; private?: boolean; error?: string };
 
 // Push the trained model to the Hugging Face Hub. Token is sent once, not stored.
-export async function exportToHub(token: string, repo_id: string, isPrivate: boolean): Promise<HubResult> {
+export async function exportToHub(token: string, repo_id: string, isPrivate: boolean, task = "router"): Promise<HubResult> {
   const r = await fetch(`${BASE}/api/export/hf`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, repo_id, private: isPrivate }),
+    body: JSON.stringify({ token, repo_id, private: isPrivate, task }),
   });
   return r.json();
 }
@@ -118,11 +119,11 @@ export type InferResult = {
   error?: string;
 };
 
-export async function infer(text: string): Promise<InferResult> {
+export async function infer(text: string, task = "router"): Promise<InferResult> {
   const r = await fetch(`${BASE}/api/infer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, task }),
   });
   return r.json();
 }

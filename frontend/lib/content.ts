@@ -554,6 +554,24 @@ export const CONCEPTS: Record<string, Explain> = {
     },
   },
 
+  sentiment: {
+    title: { en: "Sentiment analysis", he: "ניתוח סנטימנט" },
+    levels: {
+      beginner: {
+        en: "Sentiment analysis means teaching a model to read the FEELING behind text — is this review happy, angry, or just neutral? It's the same kind of task as the router (text in, one label out), which is why we can reuse the exact same training machine. Swap the dataset, keep the engine.",
+        he: "ניתוח סנטימנט פירושו ללמד מודל לקרוא את הרגש שמאחורי הטקסט — האם הביקורת הזו מרוצה, כועסת, או סתם ניטרלית? זו אותה משפחת משימה כמו הראוטר (טקסט נכנס, תווית אחת יוצאת), ולכן אפשר לעשות שימוש חוזר באותה מכונת אימון בדיוק. החלף את הדאטה, שמור על המנוע.",
+      },
+      intermediate: {
+        en: "It's single-label text classification over {positive, negative, neutral}. Real pipelines act on the label — escalate angry tickets to a human, auto-thank happy ones. The hard part isn't the model, it's the data: sarcasm, mixed sentiment, and domain words ('sick' = good in slang) are where accuracy goes to die, so per-class recall matters more than headline accuracy.",
+        he: "זהו סיווג טקסט בתווית-יחידה מעל {חיובי, שלילי, ניטרלי}. צינורות אמיתיים פועלים לפי התווית — מסלולים פניות כועסות לאדם, מודים אוטומטית למרוצות. החלק הקשה אינו המודל אלא הדאטה: סרקזם, סנטימנט מעורב, ומילים תלויות-תחום הם המקום שבו הדיוק נשבר, ולכן ריקול פר-מחלקה חשוב יותר מדיוק כללי.",
+      },
+      advanced: {
+        en: "Beyond 3-way polarity: fine-grained (1–5 stars), aspect-based sentiment (the food was great but the service was slow → +food, −service), and emotion classification (joy/anger/fear/…). Class imbalance is the norm (most text is neutral), so weight the loss or report macro-F1, not accuracy. For deployment, calibrate the probabilities and set an abstention threshold so low-confidence cases get a human — exactly the action-routing pattern the labels here encode.",
+        he: "מעבר לקוטביות תלת-כיוונית: דירוג עדין (1–5 כוכבים), סנטימנט מבוסס-היבט (האוכל היה מצוין אבל השירות איטי → +אוכל, −שירות), וסיווג רגשות. חוסר-איזון מחלקות הוא הנורמה (רוב הטקסט ניטרלי), אז שקלל את ה-loss או דווח macro-F1, לא דיוק. לפריסה, כייל את ההסתברויות וקבע סף הימנעות כך שמקרים בביטחון נמוך יעברו לאדם — בדיוק תבנית ניתוב-הפעולה שהתוויות כאן מקודדות.",
+      },
+    },
+  },
+
   export: {
     title: { en: "Exporting & sharing a model", he: "ייצוא ושיתוף מודל" },
     levels: {

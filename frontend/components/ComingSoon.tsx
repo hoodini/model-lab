@@ -20,13 +20,6 @@ const RIDES: Ride[] = [
     chipEn: "GENERATION", chipHe: "ג'נרציה",
   },
   {
-    en: "Read the feeling",
-    he: "לקרוא את הרגש",
-    descEn: "Sentiment analysis: train a model to tell positive from negative — and the nuanced cases in between — in English and Hebrew.",
-    descHe: "ניתוח סנטימנט: אימון מודל להבחין בין חיובי לשלילי — והמקרים המעודנים שביניהם — באנגלית ובעברית.",
-    chipEn: "CLASSIFY", chipHe: "סיווג",
-  },
-  {
     en: "Fine-tune giants with LoRA",
     he: "כיוונון ענקים עם LoRA",
     descEn: "Train tiny adapters (LoRA / QLoRA) to bend huge models on a single GPU — most of the weights frozen, a few million trained.",
@@ -65,8 +58,8 @@ export function ComingSoon() {
         </div>
         <p style={{ maxWidth: 680, marginTop: 14, fontSize: 17, lineHeight: 1.6, color: "#EDE7FF" }}>
           {t(
-            "Project 01 was the router. These are coming next — each one a real model you train yourself, explained at every level, running on your own hardware. Same promise: nothing hidden.",
-            "פרויקט 01 היה הראוטר. אלו מגיעים בהמשך — כל אחד מודל אמיתי שאתם מאמנים בעצמכם, מוסבר בכל רמה, רץ על החומרה שלכם. אותה הבטחה: שום דבר לא מוסתר."
+            "Projects 01 (router) and 02 (sentiment) are live above. These are coming next — each one a real model you train yourself, explained at every level, running on your own hardware. Same promise: nothing hidden.",
+            "פרויקטים 01 (ראוטר) ו-02 (סנטימנט) פעילים למעלה. אלו מגיעים בהמשך — כל אחד מודל אמיתי שאתם מאמנים בעצמכם, מוסבר בכל רמה, רץ על החומרה שלכם. אותה הבטחה: שום דבר לא מוסתר."
           )}
         </p>
 
@@ -85,7 +78,7 @@ export function ComingSoon() {
                   fontSize: 11, color: "#000", background: "var(--yuv-yellow)", padding: "3px 9px",
                   letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 700,
                 }}>
-                  {t("NEXT STOP", "תחנה הבאה")} {String(i + 2).padStart(2, "0")}
+                  {t("NEXT STOP", "תחנה הבאה")} {String(i + 3).padStart(2, "0")}
                 </span>
                 <span className="mono" style={{ fontSize: 10.5, color: "var(--yuv-yellow)", letterSpacing: ".08em" }}>
                   {lang === "he" ? r.chipHe : r.chipEn}

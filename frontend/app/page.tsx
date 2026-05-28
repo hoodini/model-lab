@@ -7,6 +7,7 @@ import { Stats } from "@/components/Stats";
 import { HowItWorks } from "@/components/HowItWorks";
 import { Anatomy } from "@/components/Anatomy";
 import { RouterLab } from "@/components/RouterLab";
+import { SentimentLab } from "@/components/SentimentLab";
 import { ComingSoon } from "@/components/ComingSoon";
 import { useLab } from "@/components/providers";
 
@@ -31,6 +32,7 @@ export default function Page() {
       <HowItWorks />
       <Anatomy />
       <RouterLab />
+      <SentimentLab />
       <ComingSoon />
 
       <footer className="content" style={{ borderTop: "3px solid var(--yuv-purple)", padding: "48px 0" }}>
