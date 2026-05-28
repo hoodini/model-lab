@@ -94,6 +94,23 @@ export async function getEvals(): Promise<Evals> {
   return r.json();
 }
 
+// Trigger a browser download of the trained model as a .zip.
+export function exportZipUrl(): string {
+  return `${BASE}/api/export/zip`;
+}
+
+export type HubResult = { url?: string; repo_id?: string; user?: string; private?: boolean; error?: string };
+
+// Push the trained model to the Hugging Face Hub. Token is sent once, not stored.
+export async function exportToHub(token: string, repo_id: string, isPrivate: boolean): Promise<HubResult> {
+  const r = await fetch(`${BASE}/api/export/hf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, repo_id, private: isPrivate }),
+  });
+  return r.json();
+}
+
 export async function infer(text: string) {
   const r = await fetch(`${BASE}/api/infer`, {
     method: "POST",

@@ -553,4 +553,22 @@ export const CONCEPTS: Record<string, Explain> = {
       },
     },
   },
+
+  export: {
+    title: { en: "Exporting & sharing a model", he: "ייצוא ושיתוף מודל" },
+    levels: {
+      beginner: {
+        en: "A trained model is just a folder of files: the learned weights, the tokenizer, and a small config that says what the labels are. 'Exporting' means taking that folder with you — either as a .zip you download, or by uploading it to Hugging Face, the public library where people share models. Once it's there, anyone (including future you) can load it by name and use it.",
+        he: "מודל מאומן הוא בסך הכל תיקיית קבצים: המשקלים שנלמדו, הטוקנייזר, וקונפיג קטן שאומר מה התוויות. 'ייצוא' פירושו לקחת את התיקייה הזו איתך — או כקובץ .zip שמורידים, או בהעלאה ל-Hugging Face, הספרייה הציבורית שבה אנשים משתפים מודלים. ברגע שהוא שם, כל אחד (כולל אתה בעתיד) יכול לטעון אותו בשם ולהשתמש בו.",
+      },
+      intermediate: {
+        en: "The folder contains safetensors weights, tokenizer files, and config.json with id2label/label2id so the model is fully self-describing — from_pretrained(path) reloads it exactly. Pushing to the Hub (huggingface_hub.upload_folder) versions it with git-LFS and gives you a model page, an inference widget, and a stable id others can depend on. Keep the repo private until you're happy with the evals.",
+        he: "התיקייה מכילה משקלי safetensors, קבצי טוקנייזר, ו-config.json עם id2label/label2id כך שהמודל מתאר את עצמו במלואו — from_pretrained(path) טוען אותו בדיוק. דחיפה ל-Hub (huggingface_hub.upload_folder) מנהלת גרסאות עם git-LFS ונותנת לך עמוד מודל, ווידג'ט הסקה, ומזהה יציב שאחרים יכולים להסתמך עליו. שמור את המאגר פרטי עד שאתה מרוצה מההערכות.",
+      },
+      advanced: {
+        en: "Ship a model card (intended use, training data, eval numbers, limitations) alongside the weights — it's the difference between an artifact and a reusable model. For adapter-based fine-tuning you'd push only the LoRA delta (a few MB) rather than the full backbone, and merge at load time. Mind the token scope: a write token is enough to create/overwrite repos under your namespace, so treat it like a password and never bake it into client code — here it's sent once to the backend for a single upload call and never persisted.",
+        he: "צרף כרטיס מודל (שימוש מיועד, דאטה אימון, מספרי הערכה, מגבלות) לצד המשקלים — זה ההבדל בין ארטיפקט למודל לשימוש חוזר. בכוונון מבוסס-אדפטר היית דוחף רק את דלתת ה-LoRA (כמה מגה-בייט) במקום את כל ה-backbone, וממזג בזמן טעינה. שים לב להיקף הטוקן: טוקן כתיבה מספיק כדי ליצור/לדרוס מאגרים במרחב השמות שלך, אז התייחס אליו כמו סיסמה ולעולם אל תטמיע אותו בקוד צד-לקוח — כאן הוא נשלח פעם אחת ל-backend לקריאת העלאה יחידה ואינו נשמר.",
+      },
+    },
+  },
 };

@@ -21,13 +21,14 @@ import traceback
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
 
 from data.router_seed import get_seed, LABEL_IDS
 from training.router_trainer import train_router
 from training import predict as predictor
 from training import inspect as inspector
+from training import export as exporter
 
 app = FastAPI(title="Model Lab API")
 
@@ -93,6 +94,12 @@ class TokenizeRequest(BaseModel):
 class InspectRequest(BaseModel):
     text: str
     base_model: str = "distilbert-base-multilingual-cased"
+
+
+class HubExportRequest(BaseModel):
+    token: str
+    repo_id: str
+    private: bool = True
 
 
 # Cache tokenizers by model name so repeated calls are instant.
@@ -227,3 +234,31 @@ def evals():
         return {"error": "this model has no saved evals"}
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+# ── Export the trained model: download as .zip ───────────────────────────────
+# Packages weights + tokenizer + config into one file you can keep, share, or
+# commit to GitHub. Fully real — it's the exact folder the model loads from.
+@app.get("/api/export/zip")
+def export_zip():
+    model_dir = LATEST_MODEL_DIR["path"]
+    if not model_dir or not os.path.isdir(model_dir):
+        return {"error": "no trained model yet — train one first"}
+    data = exporter.zip_bytes(model_dir)
+    name = f"model-lab-router-{os.path.basename(model_dir)}.zip"
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+# ── Export the trained model: push to the Hugging Face Hub ────────────────────
+# A real upload to the standard model registry. The write token is used only
+# for this call and is never stored or logged.
+@app.post("/api/export/hf")
+def export_hf(req: HubExportRequest):
+    model_dir = LATEST_MODEL_DIR["path"]
+    if not model_dir or not os.path.isdir(model_dir):
+        return {"error": "no trained model yet — train one first"}
+    return exporter.push_to_hub(model_dir, req.token, req.repo_id, req.private)

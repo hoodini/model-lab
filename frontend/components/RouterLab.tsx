@@ -40,6 +40,14 @@ export function RouterLab() {
   const [inferText, setInferText] = useState("");
   const [inferRes, setInferRes] = useState<any>(null);
 
+  // ── export ──────────────────────────────────────────────────────────────
+  const [hfToken, setHfToken] = useState("");
+  const [hfRepo, setHfRepo] = useState("");
+  const [hfPrivate, setHfPrivate] = useState(true);
+  const [hfBusy, setHfBusy] = useState(false);
+  const [hfRes, setHfRes] = useState<api.HubResult | null>(null);
+  const hasModel = status === "done" || !!evals;
+
   // ── detected compute hardware (auto: NVIDIA GPU / Apple / CPU) ──────────
   const [hw, setHw] = useState<{ device?: string; device_name?: string; dtype?: string; mixed_precision?: boolean } | null>(null);
 
@@ -106,6 +114,18 @@ export function RouterLab() {
   async function doInfer() {
     if (!inferText.trim()) return;
     setInferRes(await api.infer(inferText));
+  }
+
+  async function doHubExport() {
+    if (!hfToken.trim() || !hfRepo.trim()) return;
+    setHfBusy(true); setHfRes(null);
+    try {
+      setHfRes(await api.exportToHub(hfToken.trim(), hfRepo.trim(), hfPrivate));
+    } catch (e: any) {
+      setHfRes({ error: String(e?.message || e) });
+    } finally {
+      setHfBusy(false);
+    }
   }
 
   const pct = progress.total ? Math.min(100, (progress.step / progress.total) * 100) : 0;
@@ -354,6 +374,78 @@ export function RouterLab() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* 8 — export (take it with you) */}
+        <div>
+          {H("Step 6 · take it with you", "שלב 6 · קח אותו איתך")}
+          <Explain concept="export" />
+          {!hasModel && (
+            <p style={{ marginTop: 12, opacity: .8 }}>
+              {t("Train a model first — then download it or push it to Hugging Face.",
+                 "אמן מודל קודם — ואז הורד אותו או דחוף אותו ל-Hugging Face.")}
+            </p>
+          )}
+          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 18 }}>
+
+            {/* download zip */}
+            <div className="card">
+              <div className="mono tag" style={{ color: "var(--yuv-purple)" }}>{t("DOWNLOAD", "הורדה")}</div>
+              <div className="display" style={{ fontSize: 20, margin: "8px 0" }}>{t("As a .zip file", "כקובץ .zip")}</div>
+              <p style={{ fontSize: 13, marginBottom: 12 }}>
+                {t("The complete model folder — weights, tokenizer, config. Keep it, share it, or commit it to GitHub.",
+                   "תיקיית המודל המלאה — משקלים, טוקנייזר, קונפיג. שמור, שתף, או דחוף ל-GitHub.")}
+              </p>
+              <a
+                className="btn btn-purple"
+                href={hasModel ? api.exportZipUrl() : undefined}
+                onClick={(e) => { if (!hasModel) e.preventDefault(); }}
+                style={{ pointerEvents: hasModel ? "auto" : "none", opacity: hasModel ? 1 : .5, display: "inline-block" }}
+                download
+              >
+                {t("↓ Download model .zip", "↓ הורד את המודל .zip")}
+              </a>
+            </div>
+
+            {/* push to hugging face */}
+            <div className="card">
+              <div className="mono tag" style={{ color: "var(--yuv-purple)" }}>{t("PUBLISH", "פרסום")}</div>
+              <div className="display" style={{ fontSize: 20, margin: "8px 0" }}>{t("To the Hugging Face Hub", "ל-Hugging Face Hub")}</div>
+              <p style={{ fontSize: 13, marginBottom: 12 }}>
+                {t("A real upload to the standard model registry. Your write token is used once and never stored.",
+                   "העלאה אמיתית למאגר המודלים הסטנדרטי. טוקן הכתיבה משמש פעם אחת ואינו נשמר.")}
+              </p>
+              <div style={{ display: "grid", gap: 8 }}>
+                <input
+                  value={hfRepo} onChange={(e) => setHfRepo(e.target.value)}
+                  placeholder={t("username/router-model", "username/router-model")}
+                  disabled={!hasModel}
+                />
+                <input
+                  type="password" value={hfToken} onChange={(e) => setHfToken(e.target.value)}
+                  placeholder={t("hf_… write token", "hf_… טוקן כתיבה")}
+                  disabled={!hasModel}
+                  autoComplete="off"
+                />
+                <label className="mono" style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                  <input type="checkbox" checked={hfPrivate} onChange={(e) => setHfPrivate(e.target.checked)} disabled={!hasModel} style={{ width: "auto" }} />
+                  {t("private repository", "מאגר פרטי")}
+                </label>
+                <button className="btn btn-yellow" onClick={doHubExport} disabled={!hasModel || hfBusy || !hfToken.trim() || !hfRepo.trim()}>
+                  {hfBusy ? t("Uploading…", "מעלה…") : t("↑ Push to Hugging Face", "↑ דחוף ל-Hugging Face")}
+                </button>
+              </div>
+              {hfRes?.url && (
+                <p style={{ fontSize: 13, marginTop: 10, color: "var(--yuv-purple)" }}>
+                  {t("Done →", "בוצע →")} <a href={hfRes.url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>{hfRes.url}</a>
+                </p>
+              )}
+              {hfRes?.error && <p style={{ color: "#c00", fontSize: 13, marginTop: 10 }}>{hfRes.error}</p>}
+              <p className="mono" style={{ fontSize: 11, marginTop: 10, opacity: .65 }}>
+                {t("Get a write token at huggingface.co/settings/tokens", "השג טוקן כתיבה ב-huggingface.co/settings/tokens")}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
