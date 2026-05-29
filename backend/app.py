@@ -197,6 +197,16 @@ def health():
     return info
 
 
+# ── Full hardware report for the "will it run here?" advisor ─────────────────
+@app.get("/api/hardware")
+def hardware():
+    try:
+        from training.hardware import full_report
+        return full_report()
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── The dataset the user starts from (they can edit it in the UI) ────────────
 @app.get("/api/dataset")
 def dataset(task: str = "router"):
