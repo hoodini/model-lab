@@ -24,11 +24,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
 
-from data import router_seed, sentiment_seed
+from data import router_seed, sentiment_seed, gen_seed
 from training.router_trainer import train_router
 from training import predict as predictor
 from training import inspect as inspector
 from training import export as exporter
+from training import gen_trainer
 
 # Every project is just a classification task with its own dataset + labels.
 # The trainer is identical — that's the whole lesson. Add a new task here and
@@ -96,6 +97,25 @@ def _recover_latest_model():
 
 _recover_latest_model()
 
+# Latest generative (LoRA adapter) run, recovered from disk on restart.
+GEN_LATEST = {"path": None}
+
+
+def _recover_latest_gen():
+    base = os.path.join(CHECKPOINTS, "gen")
+    if not os.path.isdir(base):
+        return
+    cands = []
+    for n in os.listdir(base):
+        d = os.path.join(base, n)
+        if os.path.isfile(os.path.join(d, "adapter_config.json")):
+            cands.append((os.path.getmtime(d), d))
+    if cands:
+        GEN_LATEST["path"] = max(cands)[1]
+
+
+_recover_latest_gen()
+
 
 # ── Request body shapes (pydantic validates incoming JSON for us) ────────────
 class Row(BaseModel):
@@ -133,6 +153,25 @@ class HubExportRequest(BaseModel):
     repo_id: str
     private: bool = True
     task: str = "router"
+
+
+class GenTrainRequest(BaseModel):
+    rows: list[dict]
+    base_model: str = "HuggingFaceTB/SmolLM2-135M-Instruct"
+    epochs: int = 3
+    lr: float = 2e-4
+    batch_size: int = 1
+    grad_accum: int = 4
+    rank: int = 16
+    max_len: int = 512
+    hf_token: str = ""
+
+
+class GenSampleRequest(BaseModel):
+    prompt: str
+    hf_token: str = ""
+    max_new_tokens: int = 160
+    temperature: float = 0.7
 
 
 # Cache tokenizers by model name so repeated calls are instant.
@@ -300,3 +339,61 @@ def export_hf(req: HubExportRequest):
     if not model_dir or not os.path.isdir(model_dir):
         return {"error": "no trained model yet — train one first"}
     return exporter.push_to_hub(model_dir, req.token, req.repo_id, req.private)
+
+
+# ══ PROJECT 03 · GENERATIVE FINE-TUNING (Gemma 4 + QLoRA) ════════════════════
+@app.get("/api/gen/dataset")
+def gen_dataset():
+    return gen_seed.get_seed()
+
+
+@app.post("/api/gen/train")
+def gen_train(req: GenTrainRequest):
+    job_id = uuid.uuid4().hex[:8]
+    model_dir = os.path.join(CHECKPOINTS, "gen", job_id)
+    JOBS[job_id] = {"events": [], "done": False, "status": "running", "model_dir": model_dir}
+
+    def emit(ev):
+        JOBS[job_id]["events"].append(ev)
+
+    def run():
+        try:
+            config = {
+                "base_model": req.base_model, "epochs": req.epochs, "lr": req.lr,
+                "batch_size": req.batch_size, "grad_accum": req.grad_accum,
+                "rank": req.rank, "max_len": req.max_len, "hf_token": req.hf_token,
+            }
+            gen_trainer.train_gen(req.rows, config, emit, model_dir)
+            JOBS[job_id]["status"] = "completed"
+            GEN_LATEST["path"] = model_dir
+        except Exception as e:
+            emit({"type": "error", "message": str(e), "trace": traceback.format_exc()})
+            JOBS[job_id]["status"] = "error"
+        finally:
+            JOBS[job_id]["done"] = True
+
+    threading.Thread(target=run, daemon=True).start()
+    return {"job_id": job_id}
+
+
+@app.post("/api/gen/sample")
+def gen_sample(req: GenSampleRequest):
+    adapter = GEN_LATEST["path"]
+    if not adapter or not os.path.isdir(adapter):
+        return {"error": "no fine-tuned model yet — train one first"}
+    try:
+        return gen_trainer.generate(adapter, req.prompt, req.hf_token or None,
+                                    req.max_new_tokens, req.temperature)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/gen/export/zip")
+def gen_export_zip():
+    adapter = GEN_LATEST["path"]
+    if not adapter or not os.path.isdir(adapter):
+        return {"error": "no fine-tuned model yet — train one first"}
+    data = exporter.zip_bytes(adapter)
+    name = f"model-lab-lora-{os.path.basename(adapter)}.zip"
+    return Response(content=data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"'})

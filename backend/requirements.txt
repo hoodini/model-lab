@@ -17,7 +17,19 @@ pydantic==2.10.4
 # depends on your hardware (CUDA version, or CPU-only). Install it
 # separately with the right index URL (see the README setup step) so it
 # matches whatever GPU/CPU you have — the app auto-detects the device.
-transformers==4.48.0
-datasets==3.2.0
-accelerate==1.2.1
+transformers>=5.9.0
+datasets>=4.0.0
+accelerate>=1.13.0
 scikit-learn==1.6.0
+
+# ── Generative fine-tuning (Project 03 · Gemma 4 + QLoRA) ─────
+# peft          = LoRA / QLoRA adapters (train ~1% of the weights).
+# bitsandbytes  = 4-bit (NF4) quantization so a multi-B model fits one GPU.
+# trl           = SFT helpers (we use the plain Trainer path, trl kept for parity).
+# huggingface_hub = gated-model download (Gemma) + Hub upload/export.
+# bitsandbytes 4-bit needs a CUDA GPU; on CPU the generative lab falls back to
+# slow full-precision LoRA and is only practical for tiny models.
+peft>=0.19
+bitsandbytes>=0.45
+trl>=1.5
+huggingface_hub>=1.0
