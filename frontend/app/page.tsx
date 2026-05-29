@@ -8,6 +8,7 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { Anatomy } from "@/components/Anatomy";
 import { RouterLab } from "@/components/RouterLab";
 import { SentimentLab } from "@/components/SentimentLab";
+import { GemmaLab } from "@/components/GemmaLab";
 import { DeepLearning } from "@/components/DeepLearning";
 import { Academy } from "@/components/Academy";
 import { ComingSoon } from "@/components/ComingSoon";
@@ -35,6 +36,7 @@ export default function Page() {
       <Anatomy />
       <RouterLab />
       <SentimentLab />
+      <GemmaLab />
       <DeepLearning />
       <Academy />
       <ComingSoon />

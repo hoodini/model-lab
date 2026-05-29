@@ -572,6 +572,24 @@ export const CONCEPTS: Record<string, Explain> = {
     },
   },
 
+  generative_ft: {
+    title: { en: "Fine-tuning a generative LLM", he: "כוונון מודל שפה גנרטיבי" },
+    levels: {
+      beginner: {
+        en: "The router and sentiment models PICK a label. A generative model like Gemma 4 WRITES — so here you teach it to answer the way you want by showing it example conversations. We freeze the giant model and train a tiny LoRA add-on, so it fits on your GPU.",
+        he: "מודלי הראוטר והסנטימנט בוחרים תווית. מודל גנרטיבי כמו Gemma 4 כותב — אז כאן מלמדים אותו לענות כמו שאתה רוצה, על ידי הצגת שיחות לדוגמה. אנחנו מקפיאים את המודל הענק ומאמנים תוסף LoRA זעיר, כך שהוא נכנס ל-GPU שלך.",
+      },
+      intermediate: {
+        en: "This is supervised fine-tuning (SFT) of a decoder-only LLM: each example is a chat (user turn + the assistant reply you want), rendered through the model's chat template, trained with causal-LM cross-entropy. QLoRA loads the base in 4-bit and trains LoRA adapters, so a multi-billion-param model fits on a single 24GB GPU.",
+        he: "זהו כוונון מונחה (SFT) של LLM דקודר-בלבד: כל דוגמה היא שיחה (תור משתמש + תשובת העוזר הרצויה), שעוברת דרך תבנית הצ'אט של המודל, ומאומנת עם cross-entropy של causal-LM. QLoRA טוען את הבסיס ב-4-bit ומאמן אדפטרי LoRA, כך שמודל של מיליארדי פרמטרים נכנס ל-GPU יחיד של 24GB.",
+      },
+      advanced: {
+        en: "Mask the loss to the assistant tokens so the model learns to respond, not echo the prompt; watch for overfitting on a tiny set (the style sticks fast, facts don't). Gemma is gated — accept the license and pass an HF token. The output is a few-MB adapter you merge or serve atop the frozen base; export to GGUF for llama.cpp/Ollama. Bigger Gemma 4 (26B-MoE/31B) needs more than 24GB to train.",
+        he: "מסך את ה-loss לטוקני העוזר כך שהמודל ילמד להגיב, לא להדהד את הפרומפט; היזהר מ-overfitting על סט קטן (הסגנון נדבק מהר, עובדות לא). Gemma גייטד — אשר את הרישיון והעבר HF token. הפלט הוא אדפטר במשקל מגה-בייטים שממזגים או מגישים מעל הבסיס הקפוא; ייצא ל-GGUF עבור llama.cpp/Ollama. Gemma 4 הגדולים (26B-MoE/31B) דורשים יותר מ-24GB לאימון.",
+      },
+    },
+  },
+
   export: {
     title: { en: "Exporting & sharing a model", he: "ייצוא ושיתוף מודל" },
     levels: {

@@ -119,6 +119,47 @@ export type InferResult = {
   error?: string;
 };
 
+// ── Project 03 · generative fine-tuning (Gemma 4 + QLoRA) ───────────────────
+export type GenMsg = { role: "user" | "assistant"; content: string };
+export type GenRow = { messages: GenMsg[] };
+
+export async function getGenDataset(): Promise<{ rows: GenRow[] }> {
+  const r = await fetch(`${BASE}/api/gen/dataset`);
+  return r.json();
+}
+
+export type GenConfig = {
+  rows: GenRow[];
+  base_model: string;
+  epochs: number;
+  lr: number;
+  rank: number;
+  batch_size?: number;
+  grad_accum?: number;
+  max_len?: number;
+  hf_token?: string;
+};
+
+export async function startGenTraining(cfg: GenConfig): Promise<{ job_id: string }> {
+  const r = await fetch(`${BASE}/api/gen/train`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cfg),
+  });
+  return r.json();
+}
+
+export async function genSample(prompt: string, hf_token?: string, temperature = 0.7): Promise<{ text?: string; error?: string }> {
+  const r = await fetch(`${BASE}/api/gen/sample`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, hf_token, temperature }),
+  });
+  return r.json();
+}
+
+export function genExportZipUrl(): string {
+  return `${BASE}/api/gen/export/zip`;
+}
+
 export async function infer(text: string, task = "router"): Promise<InferResult> {
   const r = await fetch(`${BASE}/api/infer`, {
     method: "POST",

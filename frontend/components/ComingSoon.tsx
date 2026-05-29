@@ -27,11 +27,11 @@ const RIDES: Ride[] = [
     chipEn: "DIFFUSION", chipHe: "דיפוזיה",
   },
   {
-    en: "Train a text generator",
-    he: "אמן מחולל טקסט",
-    descEn: "Add decoder models (GPT-2 and friends) to the live training list — a generative head instead of a classifier, same five steps.",
-    descHe: "הוספת מודלי דקודר (GPT-2 וחברים) לרשימת האימון החיה — ראש גנרטיבי במקום מסווג, אותם חמישה שלבים.",
-    chipEn: "DECODERS", chipHe: "דקודרים",
+    en: "Agents & tool use",
+    he: "סוכנים ושימוש בכלים",
+    descEn: "Give a fine-tuned model tools it can call — search, code, APIs — and watch it plan, act, and check its own work.",
+    descHe: "לתת למודל מכוונן כלים שהוא יכול לקרוא — חיפוש, קוד, APIs — ולצפות בו מתכנן, פועל, ובודק את עצמו.",
+    chipEn: "AGENTS", chipHe: "סוכנים",
   },
   {
     en: "RAG & retrieval, end to end",
