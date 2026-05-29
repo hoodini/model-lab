@@ -119,6 +119,16 @@ export type InferResult = {
   error?: string;
 };
 
+export type Hardware = {
+  device?: string; device_name?: string;
+  vram_gb?: number | null; ram_gb?: number | null; gpu_budget_gb?: number | null;
+  cpu?: string; cores?: number; dtype?: string; error?: string;
+};
+export async function getHardware(): Promise<Hardware> {
+  const r = await fetch(`${BASE}/api/hardware`);
+  return r.json();
+}
+
 // ── Project 03 · generative fine-tuning (Gemma 4 + QLoRA) ───────────────────
 export type GenMsg = { role: "user" | "assistant"; content: string };
 export type GenRow = { messages: GenMsg[] };

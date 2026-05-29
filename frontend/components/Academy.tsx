@@ -2,7 +2,7 @@
 
 import { Lesson } from "./Lesson";
 import { useLab } from "./providers";
-import { FOUNDATIONS, TOKENIZERS, LORA, UNSLOTH, DIFFUSION, AITOOLKIT } from "@/lib/academy";
+import { FOUNDATIONS, TOKENIZERS, LORA, FINETUNE_CHOICE, UNSLOTH, DIFFUSION, AITOOLKIT } from "@/lib/academy";
 
 /* ───────────────────────────────────────────────────────────────────────────
    Academy — the deep-dive curriculum, rendered as level-aware lessons with two
@@ -74,6 +74,7 @@ export function Academy() {
       <Lesson data={FOUNDATIONS} />
       <Lesson data={TOKENIZERS} />
       <Lesson data={LORA}><LoraVisual /></Lesson>
+      <Lesson data={FINETUNE_CHOICE} />
       <Lesson data={UNSLOTH} />
       <Lesson data={DIFFUSION}><DiffusionStrip /></Lesson>
       <Lesson data={AITOOLKIT} />

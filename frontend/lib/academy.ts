@@ -423,4 +423,79 @@ export const AITOOLKIT: LessonData = {
   ],
 };
 
-export const LESSONS = [FOUNDATIONS, TOKENIZERS, LORA, UNSLOTH, DIFFUSION, AITOOLKIT];
+// ── 3b · WHICH FINE-TUNE? (method vs objective, SFT vs CPT, datasets) ────────
+export const FINETUNE_CHOICE: LessonData = {
+  id: "finetune-choice",
+  tone: "content",
+  eyebrowEn: "BONUS · CHOOSING A FINE-TUNE",
+  eyebrowHe: "בונוס · בחירת כוונון",
+  titleEn: "QLoRA, full, or continued pretraining?",
+  titleHe: "QLoRA, מלא, או continued pretraining?",
+  introEn: "The Unsloth menu — LoRA q4, LoRA q16, full fine-tuning, continued pretraining — mixes up TWO separate decisions. Untangle them and the choice is easy: one axis is HOW MUCH of the model you update; the other is WHAT you're teaching it.",
+  introHe: "התפריט של Unsloth — LoRA q4, LoRA q16, full fine-tuning, continued pretraining — מערבב שתי החלטות נפרדות. תפריד ביניהן והבחירה פשוטה: ציר אחד הוא כמה מהמודל אתה מעדכן; השני הוא מה אתה מלמד אותו.",
+  blocks: [
+    {
+      k: "two-axes", tagEn: "THE KEY IDEA", tagHe: "הרעיון המרכזי",
+      titleEn: "Two questions, not one", titleHe: "שתי שאלות, לא אחת",
+      body: {
+        beginner: { en: "Those options answer two different things at once: (1) how big a change you make to the model, and (2) what you're trying to teach it. You pick one from each — they're not rivals.", he: "האפשרויות האלה עונות על שני דברים שונים בבת אחת: (1) כמה גדול השינוי שאתה עושה למודל, ו-(2) מה אתה מנסה ללמד אותו. בוחרים אחד מכל אחד — הם לא מתחרים." },
+        intermediate: { en: "Axis 1 = method (full FT vs LoRA-16bit vs QLoRA-4bit) — a memory/quality choice. Axis 2 = objective (instruction/chat SFT vs continued pretraining) — a goal/data choice. 'LoRA q4/q16/full' live on axis 1; 'continued pretrain' lives on axis 2.", he: "ציר 1 = שיטה (full FT מול LoRA-16bit מול QLoRA-4bit) — בחירת זיכרון/איכות. ציר 2 = מטרה (SFT של הוראה/צ'אט מול continued pretraining) — בחירת מטרה/דאטה. 'LoRA q4/q16/full' על ציר 1; 'continued pretrain' על ציר 2." },
+        advanced: { en: "Conflating them is the classic confusion. You combine them: e.g. 'QLoRA + SFT' or 'QLoRA + continued pretraining'. The method controls trainable-parameter footprint; the objective controls the loss target and data format. Decide each independently.", he: "הערבוב ביניהם הוא הבלבול הקלאסי. משלבים אותם: למשל 'QLoRA + SFT' או 'QLoRA + continued pretraining'. השיטה שולטת בטביעת-הרגל של הפרמטרים הנלמדים; המטרה שולטת ביעד ה-loss ובפורמט הדאטה. החלט על כל אחד בנפרד." },
+      },
+    },
+    {
+      k: "method", tagEn: "AXIS 1 · METHOD", tagHe: "ציר 1 · שיטה",
+      titleEn: "QLoRA vs LoRA vs full", titleHe: "QLoRA מול LoRA מול מלא",
+      body: {
+        beginner: { en: "QLoRA (q4): smallest memory — squeeze the frozen model to 4-bit, train a tiny add-on. LoRA (q16): same add-on but the frozen model stays full size — a bit more memory, a touch more quality. Full: retrain everything — huge memory, rarely needed.", he: "QLoRA (q4): הכי מעט זיכרון — דוחסים את המודל הקפוא ל-4-bit, מאמנים תוסף זעיר. LoRA (q16): אותו תוסף אבל המודל הקפוא נשאר בגודל מלא — קצת יותר זיכרון, קצת יותר איכות. מלא: מאמנים מחדש הכול — הרבה זיכרון, נדיר שצריך." },
+        intermediate: { en: "QLoRA = 4-bit NF4 base + LoRA adapters (default for one GPU). LoRA-16 = bf16 base + adapters (more VRAM, no quant error). Full FT = all weights + optimizer states (≈10–16× the model in memory; big data, big GPUs).", he: "QLoRA = בסיס 4-bit NF4 + אדפטרי LoRA (ברירת מחדל ל-GPU אחד). LoRA-16 = בסיס bf16 + אדפטרים (יותר VRAM, בלי שגיאת קוונטיזציה). Full FT = כל המשקלים + מצבי אופטימייזר (פי 10–16 מהמודל בזיכרון; דאטה גדול, GPU גדולים)." },
+        advanced: { en: "On a 24GB GPU: QLoRA trains up to ~30B; LoRA-16 roughly halves the trainable ceiling; full FT of even 7B needs multi-GPU/offload. Quality gap QLoRA→LoRA-16→full is usually small for adaptation tasks; reach for full only with large data and a real reason.", he: "על GPU של 24GB: QLoRA מאמן עד ~30B; LoRA-16 בערך מחצית מהתקרה; full FT של אפילו 7B דורש multi-GPU/offload. פער האיכות QLoRA→LoRA-16→full בדרך כלל קטן למשימות התאמה; פנה ל-full רק עם דאטה גדול וסיבה אמיתית." },
+      },
+    },
+    {
+      k: "sft-cpt", tagEn: "AXIS 2 · OBJECTIVE", tagHe: "ציר 2 · מטרה",
+      titleEn: "SFT vs continued pretraining", titleHe: "SFT מול continued pretraining",
+      body: {
+        beginner: { en: "SFT teaches BEHAVIOR — 'given this prompt, answer like this' — from example Q&A pairs. CPT teaches KNOWLEDGE/VOICE — feed it raw text (no questions) and it absorbs the domain, language, or style.", he: "SFT מלמד התנהגות — 'בהינתן הפרומפט הזה, ענה כך' — מתוך זוגות שאלה-תשובה. CPT מלמד ידע/קול — מזינים טקסט גולמי (בלי שאלות) והוא סופג את התחום, השפה או הסגנון." },
+        intermediate: { en: "SFT = supervised fine-tuning on instruction/response pairs (chat template, loss on the answer). CPT = continued pretraining: the same next-token objective the base used, over raw unlabelled text, to inject a corpus/domain/language.", he: "SFT = כוונון מונחה על זוגות הוראה/תשובה (תבנית צ'אט, loss על התשובה). CPT = continued pretraining: אותה מטרת next-token שהבסיס השתמש בה, על טקסט גולמי לא-מתויג, כדי להחדיר קורפוס/תחום/שפה." },
+        advanced: { en: "SFT changes the response policy; CPT shifts the base distribution itself. CPT forgets more (use lower LR, more data, replay), and is the move for a new language or a large proprietary corpus. A common recipe is CPT to absorb the corpus, then SFT to make it promptable.", he: "SFT משנה את מדיניות התגובה; CPT מזיז את התפלגות הבסיס עצמה. CPT שוכח יותר (השתמש ב-LR נמוך, יותר דאטה, replay), והוא המהלך לשפה חדשה או קורפוס קנייני גדול. מתכון נפוץ: CPT לספיגת הקורפוס, ואז SFT כדי שיהיה ניתן-לפרומפט." },
+      },
+    },
+    {
+      k: "why-lora-cpt", tagEn: "THE CONFUSION", tagHe: "הבלבול",
+      titleEn: "Why CPT still uses LoRA", titleHe: "למה CPT עדיין משתמש ב-LoRA",
+      body: {
+        beginner: { en: "CPT isn't an alternative to LoRA — CPT is the goal, LoRA is how you reach it cheaply. Updating every weight on raw text is huge, so you do continued pretraining THROUGH a LoRA adapter.", he: "CPT הוא לא חלופה ל-LoRA — CPT הוא המטרה, LoRA הוא איך מגיעים אליה בזול. עדכון כל משקל על טקסט גולמי הוא ענק, אז עושים continued pretraining דרך אדפטר LoRA." },
+        intermediate: { en: "In Unsloth, CPT is run with LoRA but with two tweaks: add embed_tokens and lm_head to the LoRA target modules (so it can learn new tokens/style at the edges), and train on a raw 'text' dataset instead of chat pairs.", he: "ב-Unsloth, CPT רץ עם LoRA אבל עם שני שינויים: מוסיפים את embed_tokens ו-lm_head למודולי היעד של LoRA (כדי שילמד טוקנים/סגנון חדשים בקצוות), ומאמנים על דאטהסט 'text' גולמי במקום זוגות צ'אט." },
+        advanced: { en: "Full-parameter CPT exists but is compute-brutal; LoRA-CPT (often higher rank, lower embedding LR ~5e-6 vs ~5e-5 for the LoRA layers) captures most of the benefit cheaply. So 'LoRA vs CPT' is a category error — it's 'CPT, implemented via LoRA'.", he: "CPT בכל-הפרמטרים קיים אך תובעני חישובית; LoRA-CPT (לרוב rank גבוה יותר, LR נמוך ל-embedding ~5e-6 מול ~5e-5 לשכבות ה-LoRA) לוכד את רוב התועלת בזול. אז 'LoRA מול CPT' הוא בלבול קטגוריות — זה 'CPT, ממומש דרך LoRA'." },
+      },
+    },
+    {
+      k: "your-style", tagEn: "YOUR USE CASE", tagHe: "המקרה שלך",
+      titleEn: "Train on your own writing", titleHe: "אימון על הכתיבה שלך",
+      body: {
+        beginner: { en: "Want it to write posts in YOUR voice? Start with SFT + QLoRA: show it pairs of 'write a post about X' → your real post. It learns to produce your style on demand. Only reach for CPT if you have a huge pile of your writing.", he: "רוצה שיכתוב פוסטים בקול שלך? התחל עם SFT + QLoRA: הראה לו זוגות של 'כתוב פוסט על X' → הפוסט האמיתי שלך. הוא לומד לייצר את הסגנון שלך לפי דרישה. פנה ל-CPT רק אם יש לך ערימה ענקית של כתיבה." },
+        intermediate: { en: "Style transfer is mostly a behavior problem, so SFT+QLoRA nails it with ~50–800 (instruction → your post) pairs, and forgets less. If output still doesn't sound like you, or you have thousands of posts, do QLoRA-CPT on the raw posts, then a short SFT pass for promptability.", he: "העברת סגנון היא בעיקר בעיית התנהגות, אז SFT+QLoRA פותר אותה עם ~50–800 זוגות (הוראה → הפוסט שלך), ושוכח פחות. אם הפלט עדיין לא נשמע כמוך, או שיש לך אלפי פוסטים, עשה QLoRA-CPT על הפוסטים הגולמיים, ואז מעבר SFT קצר לניתנות-לפרומפט." },
+        advanced: { en: "Many over-reach for CPT and get a model that vaguely sounds like them but won't follow instructions. Default SFT-first; add CPT only to absorb a large corpus. Watch for overfitting (it parrots posts verbatim) and keep a few held-out posts to eyeball generalization.", he: "רבים מגזימים עם CPT ומקבלים מודל שנשמע כמוהם במעורפל אך לא עוקב אחר הוראות. ברירת מחדל SFT-קודם; הוסף CPT רק כדי לספוג קורפוס גדול. היזהר מ-overfitting (הוא משכפל פוסטים מילה-במילה) ושמור כמה פוסטים בצד כדי לבחון הכללה." },
+      },
+    },
+    {
+      k: "datasets", tagEn: "DATA SHAPES", tagHe: "צורות דאטה",
+      titleEn: "What the dataset looks like", titleHe: "איך נראה הדאטהסט",
+      body: {
+        beginner: { en: "SFT data = pairs: a prompt and the answer you want. CPT data = just raw text, one chunk per row, no prompts. The method (q4/q16/full) does NOT change the data shape — only SFT-vs-CPT does.", he: "דאטת SFT = זוגות: פרומפט והתשובה שאתה רוצה. דאטת CPT = רק טקסט גולמי, חתיכה אחת בכל שורה, בלי פרומפטים. השיטה (q4/q16/full) לא משנה את צורת הדאטה — רק SFT-מול-CPT משנה." },
+        intermediate: { en: "SFT: {\"messages\":[{\"role\":\"user\",...},{\"role\":\"assistant\",...}]} (or {instruction, output}). CPT: {\"text\":\"<raw passage>\"} per line. Same JSONL file style, totally different content.", he: "SFT: {\"messages\":[{\"role\":\"user\",...},{\"role\":\"assistant\",...}]} (או {instruction, output}). CPT: {\"text\":\"<קטע גולמי>\"} בכל שורה. אותו סגנון קובץ JSONL, תוכן שונה לחלוטין." },
+        advanced: { en: "For SFT, mask the loss to assistant tokens (train to answer, not echo). For CPT, pack/concatenate passages to the context length for efficiency. Dedup and balance both; for chat, match the model's exact chat template or the special tokens won't line up.", he: "ב-SFT, מסך את ה-loss לטוקני העוזר (אמן לענות, לא להדהד). ב-CPT, ארוז/שרשר קטעים לאורך ההקשר ליעילות. הסר כפילויות ואזן בשניהם; לצ'אט, התאם בדיוק לתבנית הצ'אט של המודל אחרת הטוקנים המיוחדים לא יתיישרו." },
+      },
+    },
+  ],
+  decision: [
+    { wantEn: "Write posts in my voice (some examples)", wantHe: "לכתוב פוסטים בקול שלי (כמה דוגמאות)", useEn: "QLoRA + SFT", useHe: "QLoRA + SFT", whyEn: "Style is a behavior; pairs teach it on-demand, cheaply, with little forgetting.", whyHe: "סגנון הוא התנהגות; זוגות מלמדים אותו לפי דרישה, בזול, עם מעט שכחה." },
+    { wantEn: "Absorb a huge private corpus / new domain", wantHe: "לספוג קורפוס פרטי ענק / תחום חדש", useEn: "QLoRA-CPT, then a short SFT", useHe: "QLoRA-CPT, ואז SFT קצר", whyEn: "Raw-text pretraining injects knowledge; SFT makes it promptable.", whyHe: "אימון על טקסט גולמי מחדיר ידע; SFT הופך אותו לניתן-לפרומפט." },
+    { wantEn: "Teach a new language", wantHe: "ללמד שפה חדשה", useEn: "CPT (add embed_tokens + lm_head)", useHe: "CPT (הוסף embed_tokens + lm_head)", whyEn: "New tokens/structure need the embedding edges trained, on raw text.", whyHe: "טוקנים/מבנה חדשים דורשים אימון של קצוות ה-embedding, על טקסט גולמי." },
+    { wantEn: "Fit training on one consumer GPU", wantHe: "להכניס אימון ל-GPU צרכני אחד", useEn: "QLoRA (q4)", useHe: "QLoRA (q4)", whyEn: "4-bit base + adapters keeps memory tiny; quality cost is negligible.", whyHe: "בסיס 4-bit + אדפטרים שומר זיכרון זעיר; עלות האיכות זניחה." },
+    { wantEn: "Max quality, big data, big GPUs", wantHe: "איכות מקסימלית, דאטה גדול, GPU גדולים", useEn: "Full fine-tuning + SFT", useHe: "כוונון מלא + SFT", whyEn: "Every weight moves — worth it only at scale and budget.", whyHe: "כל משקל זז — שווה רק בקנה מידה ותקציב." },
+  ],
+};
+
+export const LESSONS = [FOUNDATIONS, TOKENIZERS, LORA, FINETUNE_CHOICE, UNSLOTH, DIFFUSION, AITOOLKIT];
